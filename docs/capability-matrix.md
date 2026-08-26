@@ -506,3 +506,469 @@ For example:
 ```text
 mca21.cin
 
+Yes. **The verification engine should not just output PASS/FAIL.** It should raise **explainable flags** whenever it finds an inconsistency, missing evidence, failed requirement, verification problem, or suspicious cross-document relationship.
+
+I would add a dedicated section to `docs/capability-matrix.md`:
+
+# 22. Verification Engine Flags
+
+Every flag should contain at least:
+
+```text
+flag_id
+severity
+capability
+title
+explanation
+evidence_refs[]
+verification_refs[]
+rule_id
+```
+
+The engine should never raise a bare `"GST_MISMATCH"` with no explanation. It should produce something like:
+
+```text
+FLAG: GST_IDENTITY_MISMATCH
+Severity: HIGH
+
+Explanation:
+The GSTIN extracted from the submitted GST certificate belongs to
+"ABC Technologies Pvt Ltd", while the bidder name declared in the
+tender is "ABC Technology Solutions Pvt Ltd".
+
+Evidence:
+- GST certificate, page 1
+- Bidder declaration, page 2
+- GSTN verification result
+```
+
+---
+
+## A. Missing / Completeness Flags
+
+| Flag ID                         | Meaning                                                | Severity |
+| ------------------------------- | ------------------------------------------------------ | -------- |
+| `MANDATORY_DOCUMENT_MISSING`    | Required document was not submitted                    | HIGH     |
+| `MANDATORY_FIELD_MISSING`       | Required field could not be extracted                  | HIGH     |
+| `REQUIRED_REGISTRATION_MISSING` | Required registration/certificate is absent            | HIGH     |
+| `REQUIRED_DECLARATION_MISSING`  | Required declaration is absent                         | HIGH     |
+| `REQUIRED_EVIDENCE_MISSING`     | Requirement exists but supporting evidence is missing  | HIGH     |
+| `OPTIONAL_DOCUMENT_MISSING`     | Optional supporting evidence unavailable               | LOW      |
+| `INCOMPLETE_DOCUMENT`           | Document exists but required information is incomplete | MEDIUM   |
+
+---
+
+# B. Identity / Cross-Document Flags
+
+These are **very important** for your engine.
+
+| Flag ID                      | Meaning                                       | Severity |
+| ---------------------------- | --------------------------------------------- | -------- |
+| `BIDDER_NAME_MISMATCH`       | Bidder name differs across submitted evidence | HIGH     |
+| `GST_NAME_MISMATCH`          | GST identity doesn't match bidder             | HIGH     |
+| `PAN_NAME_MISMATCH`          | PAN identity doesn't match bidder             | HIGH     |
+| `UDYAM_NAME_MISMATCH`        | Udyam identity doesn't match bidder           | HIGH     |
+| `MCA_NAME_MISMATCH`          | MCA identity doesn't match bidder             | HIGH     |
+| `EPFO_NAME_MISMATCH`         | EPFO establishment identity doesn't match     | MEDIUM   |
+| `ESIC_NAME_MISMATCH`         | ESIC employer identity doesn't match          | MEDIUM   |
+| `STARTUP_NAME_MISMATCH`      | DPIIT/Startup identity doesn't match          | HIGH     |
+| `OEM_BIDDER_MISMATCH`        | OEM authorization names a different bidder    | HIGH     |
+| `ADDRESS_MISMATCH`           | Registered addresses conflict                 | MEDIUM   |
+| `ENTITY_TYPE_MISMATCH`       | Entity type differs between sources           | HIGH     |
+| `IDENTIFIER_ENTITY_MISMATCH` | Registration number belongs to another entity | CRITICAL |
+
+---
+
+# C. Registration / Status Flags
+
+These apply across GST, Udyam, MCA, EPFO, ESIC, Startup India, NSIC, BIS, etc.
+
+| Flag ID                           | Meaning                                               | Severity |
+| --------------------------------- | ----------------------------------------------------- | -------- |
+| `REGISTRATION_INVALID`            | Registration could not be validated                   | HIGH     |
+| `REGISTRATION_INACTIVE`           | Government source reports inactive status             | HIGH     |
+| `REGISTRATION_CANCELLED`          | Registration has been cancelled                       | HIGH     |
+| `REGISTRATION_EXPIRED`            | Certificate/registration has expired                  | HIGH     |
+| `REGISTRATION_NOT_FOUND`          | Identifier cannot be found in authoritative source    | HIGH     |
+| `REGISTRATION_DETAILS_MISMATCH`   | Portal data conflicts with submitted evidence         | HIGH     |
+| `REGISTRATION_DATE_INCONSISTENCY` | Registration dates conflict                           | MEDIUM   |
+| `REGISTRATION_SCOPE_MISMATCH`     | Registration does not cover required activity/product | HIGH     |
+
+---
+
+# D. GST Flags
+
+| Flag ID                        | Meaning                                      | Severity |
+| ------------------------------ | -------------------------------------------- | -------- |
+| `GSTIN_INVALID`                | GSTIN format/validation failure              | HIGH     |
+| `GSTIN_NOT_FOUND`              | GSTIN not found through verification         | HIGH     |
+| `GST_INACTIVE`                 | GST registration is inactive/cancelled       | HIGH     |
+| `GST_IDENTITY_MISMATCH`        | GST identity differs from bidder             | HIGH     |
+| `GST_ADDRESS_MISMATCH`         | GST address conflicts with required identity | MEDIUM   |
+| `GST_RETURN_COMPLIANCE_ISSUE`  | Required return compliance not satisfied     | HIGH     |
+| `GST_RETURN_EVIDENCE_MISSING`  | Required return evidence unavailable         | HIGH     |
+| `GST_VERIFICATION_UNAVAILABLE` | GST source could not be queried              | MEDIUM   |
+
+---
+
+# E. PAN / Income Tax Flags
+
+| Flag ID                        | Meaning                                         | Severity |
+| ------------------------------ | ----------------------------------------------- | -------- |
+| `PAN_INVALID`                  | PAN validation failed                           | HIGH     |
+| `PAN_NOT_FOUND`                | PAN could not be verified                       | HIGH     |
+| `PAN_INACTIVE`                 | PAN is inactive                                 | HIGH     |
+| `PAN_IDENTITY_MISMATCH`        | PAN name differs from bidder                    | HIGH     |
+| `ITR_MISSING`                  | Required ITR evidence unavailable               | HIGH     |
+| `ITR_NOT_FILED`                | Required filing not found                       | HIGH     |
+| `ITR_OUTDATED`                 | Evidence doesn't cover required assessment year | MEDIUM   |
+| `ITR_DATA_INCONSISTENCY`       | ITR data conflicts with financial evidence      | HIGH     |
+| `TAX_DATA_MISMATCH`            | Tax information conflicts across sources        | HIGH     |
+| `PAN_VERIFICATION_UNAVAILABLE` | Authoritative verification unavailable          | MEDIUM   |
+
+---
+
+# F. Udyam / MSME Flags
+
+| Flag ID                   | Meaning                                                | Severity |
+| ------------------------- | ------------------------------------------------------ | -------- |
+| `UDYAM_INVALID`           | Udyam number invalid                                   | HIGH     |
+| `UDYAM_NOT_FOUND`         | Registration not found                                 | HIGH     |
+| `UDYAM_INACTIVE`          | Registration is not active                             | HIGH     |
+| `UDYAM_CATEGORY_MISMATCH` | Enterprise category doesn't satisfy tender requirement | HIGH     |
+| `UDYAM_IDENTITY_MISMATCH` | Udyam belongs to another entity                        | HIGH     |
+| `UDYAM_SCOPE_MISMATCH`    | Activity/category doesn't match requirement            | MEDIUM   |
+
+---
+
+# G. Financial Flags
+
+These are going to be some of your most useful deterministic flags.
+
+| Flag ID                        | Meaning                                                  | Severity |
+| ------------------------------ | -------------------------------------------------------- | -------- |
+| `TURNOVER_BELOW_THRESHOLD`     | Required turnover not achieved                           | HIGH     |
+| `TURNOVER_PERIOD_MISMATCH`     | Wrong financial years supplied                           | HIGH     |
+| `TURNOVER_DATA_MISSING`        | Required turnover evidence absent                        | HIGH     |
+| `NET_WORTH_BELOW_THRESHOLD`    | Net worth below tender requirement                       | HIGH     |
+| `SOLVENCY_REQUIREMENT_FAILED`  | Required solvency condition failed                       | HIGH     |
+| `FINANCIAL_DATA_INCONSISTENCY` | Financial figures conflict across documents              | HIGH     |
+| `TURNOVER_TREND_ANOMALY`       | Unusual/inconsistent turnover information                | MEDIUM   |
+| `BALANCE_SHEET_INCOMPLETE`     | Required financial information missing                   | MEDIUM   |
+| `AUDIT_EVIDENCE_MISSING`       | Audited financial evidence required but unavailable      | HIGH     |
+| `FINANCIAL_YEAR_MISMATCH`      | Financial evidence doesn't correspond to required period | HIGH     |
+
+**Important:** `TURNOVER_TREND_ANOMALY` should be a **warning**, not an accusation of fraud.
+
+---
+
+# H. CA / UDIN Flags
+
+| Flag ID                         | Meaning                                          | Severity |
+| ------------------------------- | ------------------------------------------------ | -------- |
+| `UDIN_MISSING`                  | Required UDIN absent                             | HIGH     |
+| `UDIN_INVALID`                  | UDIN validation failed                           | HIGH     |
+| `UDIN_NOT_FOUND`                | UDIN cannot be verified                          | HIGH     |
+| `UDIN_CERTIFICATE_MISMATCH`     | UDIN doesn't correspond to submitted certificate | HIGH     |
+| `CA_IDENTITY_MISMATCH`          | CA details conflict                              | MEDIUM   |
+| `CA_CERTIFICATE_EXPIRED`        | Required certificate is expired                  | HIGH     |
+| `CA_CERTIFICATE_SCOPE_MISMATCH` | Certificate doesn't certify required claim       | HIGH     |
+
+---
+
+# I. MCA21 Flags
+
+| Flag ID                                | Meaning                                   | Severity |
+| -------------------------------------- | ----------------------------------------- | -------- |
+| `CIN_INVALID`                          | CIN invalid                               | HIGH     |
+| `CIN_NOT_FOUND`                        | Company not found                         | HIGH     |
+| `COMPANY_INACTIVE`                     | Company isn't in required active state    | HIGH     |
+| `MCA_IDENTITY_MISMATCH`                | MCA identity differs from bidder          | HIGH     |
+| `DIRECTOR_DATA_MISMATCH`               | Director information conflicts            | HIGH     |
+| `DIRECTOR_REQUIREMENT_FAILED`          | Tender-specific director condition failed | HIGH     |
+| `INCORPORATION_AGE_REQUIREMENT_FAILED` | Company doesn't meet required age         | HIGH     |
+| `MCA_DATA_UNAVAILABLE`                 | Required MCA verification unavailable     | MEDIUM   |
+
+---
+
+# J. Make in India / Local Content Flags
+
+| Flag ID                                  | Meaning                                                | Severity |
+| ---------------------------------------- | ------------------------------------------------------ | -------- |
+| `LOCAL_CONTENT_BELOW_THRESHOLD`          | Local content below required percentage                | HIGH     |
+| `SUPPLIER_CLASS_MISMATCH`                | Declared class doesn't satisfy requirement             | HIGH     |
+| `LOCAL_CONTENT_EVIDENCE_MISSING`         | Required supporting evidence absent                    | HIGH     |
+| `LOCAL_CONTENT_CALCULATION_INCONSISTENT` | Declared percentage doesn't match evidence/calculation | HIGH     |
+| `COUNTRY_OF_ORIGIN_MISMATCH`             | Origin information conflicts                           | HIGH     |
+| `MANUFACTURING_LOCATION_MISMATCH`        | Manufacturing evidence conflicts                       | MEDIUM   |
+| `MII_DECLARATION_MISMATCH`               | Declaration conflicts with supporting evidence         | HIGH     |
+
+---
+
+# K. EPFO / ESIC Flags
+
+| Flag ID                     | Meaning                                          | Severity |
+| --------------------------- | ------------------------------------------------ | -------- |
+| `EPFO_REGISTRATION_MISSING` | Required EPFO registration absent                | HIGH     |
+| `EPFO_NOT_FOUND`            | Establishment not found                          | HIGH     |
+| `EPFO_STATUS_INVALID`       | Establishment status doesn't satisfy requirement | HIGH     |
+| `EPFO_IDENTITY_MISMATCH`    | Establishment belongs to different entity        | HIGH     |
+| `ESIC_REGISTRATION_MISSING` | Required ESIC registration absent                | HIGH     |
+| `ESIC_NOT_FOUND`            | Employer not found                               | HIGH     |
+| `ESIC_STATUS_INVALID`       | ESIC status doesn't satisfy requirement          | HIGH     |
+| `ESIC_IDENTITY_MISMATCH`    | Employer identity mismatch                       | HIGH     |
+
+---
+
+# L. Startup India / DPIIT Flags
+
+| Flag ID                               | Meaning                                       | Severity |
+| ------------------------------------- | --------------------------------------------- | -------- |
+| `DPIIT_RECOGNITION_MISSING`           | Required recognition absent                   | HIGH     |
+| `DPIIT_RECOGNITION_INVALID`           | Recognition cannot be verified                | HIGH     |
+| `DPIIT_RECOGNITION_INACTIVE`          | Recognition doesn't satisfy requirement       | HIGH     |
+| `DPIIT_IDENTITY_MISMATCH`             | Recognition belongs to another entity         | HIGH     |
+| `STARTUP_CATEGORY_REQUIREMENT_FAILED` | Required startup classification not satisfied | HIGH     |
+| `STARTUP_EXEMPTION_INVALID`           | Claimed startup exemption isn't supported     | HIGH     |
+
+---
+
+# M. NSIC Flags
+
+| Flag ID                     | Meaning                                | Severity |
+| --------------------------- | -------------------------------------- | -------- |
+| `NSIC_REGISTRATION_MISSING` | Required NSIC registration absent      | HIGH     |
+| `NSIC_REGISTRATION_INVALID` | Registration cannot be verified        | HIGH     |
+| `NSIC_REGISTRATION_EXPIRED` | Registration expired                   | HIGH     |
+| `NSIC_IDENTITY_MISMATCH`    | Registration belongs to another entity | HIGH     |
+| `NSIC_SCOPE_MISMATCH`       | Product/service isn't covered          | HIGH     |
+| `NSIC_LIMIT_EXCEEDED`       | Applicable monetary limit exceeded     | HIGH     |
+
+---
+
+# N. BIS Flags
+
+| Flag ID                        | Meaning                                   | Severity |
+| ------------------------------ | ----------------------------------------- | -------- |
+| `BIS_CERTIFICATION_MISSING`    | Required BIS certification absent         | HIGH     |
+| `BIS_LICENCE_INVALID`          | Licence cannot be verified                | HIGH     |
+| `BIS_LICENCE_EXPIRED`          | Licence expired                           | HIGH     |
+| `BIS_PRODUCT_MISMATCH`         | Licence doesn't cover tendered product    | HIGH     |
+| `BIS_STANDARD_MISMATCH`        | Required IS standard not covered          | HIGH     |
+| `BIS_MANUFACTURER_MISMATCH`    | Manufacturer differs from required entity | HIGH     |
+| `BIS_SCOPE_MISMATCH`           | Certification scope insufficient          | HIGH     |
+| `BIS_VERIFICATION_UNAVAILABLE` | BIS verification unavailable              | MEDIUM   |
+
+---
+
+# O. DigiLocker Flags
+
+| Flag ID                               | Meaning                                            | Severity |
+| ------------------------------------- | -------------------------------------------------- | -------- |
+| `DIGILOCKER_VERIFICATION_FAILED`      | Document verification failed                       | HIGH     |
+| `DIGILOCKER_DOCUMENT_MISSING`         | Expected document unavailable                      | HIGH     |
+| `DIGILOCKER_ISSUER_MISMATCH`          | Document issuer isn't expected authority           | HIGH     |
+| `DIGILOCKER_DOCUMENT_MISMATCH`        | Retrieved document differs from submitted evidence | HIGH     |
+| `DIGILOCKER_VERIFICATION_UNAVAILABLE` | DigiLocker verification couldn't be completed      | MEDIUM   |
+
+---
+
+# P. OEM Authorization Flags
+
+| Flag ID                       | Meaning                                          | Severity |
+| ----------------------------- | ------------------------------------------------ | -------- |
+| `OEM_AUTHORIZATION_MISSING`   | Required authorization absent                    | HIGH     |
+| `OEM_AUTHORIZATION_INVALID`   | Authorization cannot be validated                | HIGH     |
+| `OEM_IDENTITY_MISMATCH`       | OEM identity doesn't match required manufacturer | HIGH     |
+| `AUTHORIZED_BIDDER_MISMATCH`  | Authorization is for another bidder              | CRITICAL |
+| `AUTHORIZED_PRODUCT_MISMATCH` | Authorization doesn't cover tendered product     | HIGH     |
+| `OEM_AUTHORIZATION_EXPIRED`   | Authorization expired                            | HIGH     |
+| `OEM_SCOPE_MISMATCH`          | Authorization scope insufficient                 | HIGH     |
+
+---
+
+# Q. Blacklisting / Debarment Flags
+
+These should be treated particularly seriously.
+
+| Flag ID                      | Meaning                                        | Severity |
+| ---------------------------- | ---------------------------------------------- | -------- |
+| `ACTIVE_DEBARMENT`           | Bidder currently debarred                      | CRITICAL |
+| `ACTIVE_BLACKLISTING`        | Bidder currently blacklisted                   | CRITICAL |
+| `DEBARMENT_SCOPE_MATCH`      | Debarment applies to this procurement          | CRITICAL |
+| `DEBARMENT_PERIOD_ACTIVE`    | Exclusion period covers current bid            | CRITICAL |
+| `HISTORICAL_DEBARMENT`       | Previous debarment found but no longer active  | MEDIUM   |
+| `DEBARMENT_DATA_UNAVAILABLE` | Required exclusion check couldn't be completed | HIGH     |
+
+---
+
+# R. Cross-Document Consistency Flags
+
+**This is where your engine can become genuinely useful rather than just a collection of API checks.**
+
+| Flag ID                                | Meaning                                                        | Severity |
+| -------------------------------------- | -------------------------------------------------------------- | -------- |
+| `CROSS_DOCUMENT_IDENTITY_MISMATCH`     | Same bidder identified differently                             | HIGH     |
+| `CROSS_DOCUMENT_ADDRESS_MISMATCH`      | Addresses conflict                                             | MEDIUM   |
+| `CROSS_DOCUMENT_DATE_MISMATCH`         | Important dates conflict                                       | MEDIUM   |
+| `CROSS_DOCUMENT_REGISTRATION_MISMATCH` | Registration details conflict                                  | HIGH     |
+| `CROSS_DOCUMENT_FINANCIAL_MISMATCH`    | Financial figures conflict                                     | HIGH     |
+| `CROSS_DOCUMENT_PRODUCT_MISMATCH`      | Product identity differs                                       | HIGH     |
+| `CROSS_DOCUMENT_MANUFACTURER_MISMATCH` | Manufacturer differs                                           | HIGH     |
+| `CROSS_DOCUMENT_CERTIFICATE_MISMATCH`  | Certificate details conflict                                   | HIGH     |
+| `DUPLICATE_IDENTIFIER_DETECTED`        | Same identifier appears unexpectedly across entities/documents | HIGH     |
+| `CONFLICTING_DECLARATIONS`             | Two submitted declarations contradict each other               | HIGH     |
+
+---
+
+# S. Grounding / Evidence Quality Flags
+
+These are **not compliance failures**. They're evidence-quality flags.
+
+| Flag ID                     | Meaning                                          | Severity |
+| --------------------------- | ------------------------------------------------ | -------- |
+| `LOW_FIELD_CONFIDENCE`      | Extraction confidence below configured threshold | MEDIUM   |
+| `LOW_OVERALL_GROUNDING`     | Overall evidence grounding is weak               | MEDIUM   |
+| `UNRELIABLE_EXTRACTION`     | Upstream marked evidence unreliable              | HIGH     |
+| `EVIDENCE_LOCATION_MISSING` | Expected bounding-box/source location missing    | LOW      |
+| `EVIDENCE_SOURCE_UNCLEAR`   | Provenance cannot be established                 | MEDIUM   |
+| `EVIDENCE_CONFLICT`         | Multiple evidence sources disagree               | HIGH     |
+
+Again:
+
+> **LOW_CONFIDENCE ≠ FAIL.**
+
+It should generally lead to **UNVERIFIABLE**, **WARNING**, or human review depending on the rule.
+
+---
+
+# T. Verification Infrastructure Flags
+
+These are important because otherwise your engine will confuse **"couldn't check"** with **"failed."**
+
+| Flag ID                          | Meaning                                    | Severity |
+| -------------------------------- | ------------------------------------------ | -------- |
+| `SOURCE_UNAVAILABLE`             | Government source unavailable              | MEDIUM   |
+| `SOURCE_TIMEOUT`                 | Verification request timed out             | MEDIUM   |
+| `SOURCE_AUTHENTICATION_REQUIRED` | Required authorized access unavailable     | MEDIUM   |
+| `SOURCE_RATE_LIMITED`            | Verification request was rate-limited      | LOW      |
+| `SOURCE_DATA_UNAVAILABLE`        | Source doesn't expose required information | MEDIUM   |
+| `VERIFICATION_STALE`             | Cached verification is too old             | MEDIUM   |
+| `VERIFICATION_NOT_PERFORMED`     | Required check wasn't executed             | HIGH     |
+| `VERIFICATION_PARTIAL`           | Only some required checks completed        | HIGH     |
+| `VERIFICATION_CONFLICT`          | Different authoritative sources disagree   | HIGH     |
+
+This distinction is **critical**:
+
+```text
+FAIL
+≠
+UNVERIFIABLE
+≠
+NOT_APPLICABLE
+≠
+NOT_CHECKED
+```
+
+---
+
+# U. Tender Applicability Flags
+
+Since the PS explicitly says **"other applicable sources"**, your engine needs to flag uncertainty here too.
+
+| Flag ID                             | Meaning                                                      | Severity |
+| ----------------------------------- | ------------------------------------------------------------ | -------- |
+| `REQUIREMENT_APPLICABILITY_UNCLEAR` | Can't determine whether requirement applies                  | MEDIUM   |
+| `REQUIREMENT_NOT_APPLICABLE`        | Requirement determined not to apply                          | INFO     |
+| `EXEMPTION_CLAIMED`                 | Bidder claims exemption                                      | INFO     |
+| `EXEMPTION_NOT_SUPPORTED`           | Claimed exemption lacks evidence                             | HIGH     |
+| `EXEMPTION_CONDITION_FAILED`        | Exemption conditions aren't satisfied                        | HIGH     |
+| `TENDER_THRESHOLD_MISSING`          | Rule requires threshold but threshold wasn't extracted       | HIGH     |
+| `TENDER_CLAUSE_AMBIGUOUS`           | Clause cannot be deterministically interpreted               | MEDIUM   |
+| `REQUIRED_SOURCE_UNDEFINED`         | Requirement needs verification source but none is configured | HIGH     |
+
+---
+
+# V. Overall Bid-Level Flags
+
+Finally, the engine can aggregate individual flags into higher-level findings:
+
+| Flag ID                         | Meaning                                             | Severity    |
+| ------------------------------- | --------------------------------------------------- | ----------- |
+| `CRITICAL_COMPLIANCE_FAILURE`   | One or more critical requirements failed            | CRITICAL    |
+| `MANDATORY_REQUIREMENT_FAILED`  | Mandatory tender requirement failed                 | CRITICAL    |
+| `MULTIPLE_HIGH_RISK_FLAGS`      | Multiple high-severity findings                     | HIGH        |
+| `BID_INCOMPLETE`                | Mandatory evidence missing                          | HIGH        |
+| `BID_UNVERIFIABLE`              | Required verification couldn't be completed         | HIGH        |
+| `CROSS_SOURCE_INCONSISTENCY`    | Multiple authoritative sources disagree             | HIGH        |
+| `MANUAL_REVIEW_REQUIRED`        | Automated determination isn't sufficiently reliable | MEDIUM/HIGH |
+| `COMPLIANCE_PASS_WITH_WARNINGS` | Mandatory checks passed but warnings remain         | LOW         |
+| `FULL_COMPLIANCE_PASS`          | All applicable mandatory requirements passed        | INFO        |
+
+---
+
+# And every flag needs an explanation
+
+This is important for **Stream B** too.
+
+The engine shouldn't output:
+
+```json
+{
+  "flag": "TURNOVER_BELOW_THRESHOLD"
+}
+```
+
+It should output something structurally closer to:
+
+```json
+{
+  "flag_id": "TURNOVER_BELOW_THRESHOLD",
+  "severity": "HIGH",
+  "capability": "FINANCIAL_CAPACITY",
+  "title": "Minimum turnover requirement not satisfied",
+  "explanation": "The tender requires an average annual turnover of at least ₹25 crore for the specified financial years. The bidder's extracted turnover is ₹15.8 crore for FY 2023-24.",
+  "expected": {
+    "operator": ">=",
+    "value": 25,
+    "unit": "INR_CRORE"
+  },
+  "actual": {
+    "value": 15.8,
+    "unit": "INR_CRORE",
+    "financial_year": "2023-24"
+  },
+  "evidence_refs": [
+    "balance_sheet.annual_turnovers[0]"
+  ],
+  "rule_id": "FIN_TURNOVER_001"
+}
+```
+
+That's the level of explainability we want.
+
+### The architecture becomes:
+
+```text
+                 EVIDENCE
+                    │
+                    ▼
+             VERIFICATION
+                    │
+                    ▼
+              RULE ENGINE
+                    │
+         ┌──────────┴──────────┐
+         ▼                     ▼
+     COMPLIANCE             FLAGS
+       STATUS              + EXPLANATION
+         │                     │
+         └──────────┬──────────┘
+                    ▼
+              STREAM B
+```
+
+**This flag catalogue should be part of the engine specification, not the upstream extraction schema.** The upstream team gives us evidence; **our verification engine determines which flags exist and why.**
+
+And importantly, we should keep the flag IDs **stable and machine-readable**, because Stream B, the frontend, reports, filtering, analytics, and eventually human-review workflows can all consume the same flags.
+
