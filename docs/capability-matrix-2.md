@@ -1,489 +1,779 @@
-# 26100 — Stream A Capability Matrix
+# 26100 — Capability Matrix
+## Stream A — AI Bid Compliance Verification Engine
 
-## Purpose
+This document defines the capabilities and data required by the verification
+engine for PS 26100.
 
-This matrix defines the exact bidder-side data required by the verification
-engine.
+The PS is intentionally broad. The system must support:
+- statutory registrations
+- tax/compliance verification
+- financial eligibility
+- tender-specific requirements
+- document verification
+- cross-document consistency
+- blacklisting/debarment
+- risk/compliance scoring
+- explainable flags
+- auditability
 
 IMPORTANT:
 
-This is NOT a request to extract every field present in a document.
+This document is NOT a request for the upstream extraction team to extract
+everything present in a document.
 
-The upstream extraction team should extract ONLY the fields listed below.
+For each document/capability, the upstream team should extract ONLY the
+fields explicitly marked as required under "Upstream Required Fields".
 
-Anything else found in a document should not be included unless Stream A
-explicitly adds it later.
+Government/authoritative fields are retrieved by Stream A.
+
+Tender requirements are extracted/normalized by Stream A.
+
+Derived compliance results are calculated by Stream A.
 
 ---
 
-# Data Ownership
+# 1. Data Ownership
 
 | Type | Meaning | Owner |
 |---|---|---|
-| E | Extracted from bidder-submitted documents | Upstream |
-| G | Retrieved from government/authoritative source | Stream A |
-| T | Extracted from tender requirements | Stream A |
-| D | Derived/calculated by our engine | Stream A |
+| E | Evidence extracted from bidder documents | Upstream |
+| G | Government / authoritative source data | Stream A |
+| T | Tender-derived requirement | Stream A |
+| D | Derived by verification/rules engine | Stream A |
 
-The upstream team's job ends at:
+The upstream handoff should therefore be:
 
-    document → required fields → value + provenance + confidence
+document
+→ required fields
+→ value
+→ confidence
+→ evidence reference
 
-Stream A handles:
+Stream A then performs:
 
-    verification → cross-checking → tender rules → flags → explanation
+evidence
++ portal truth
++ tender rules
+→ verification
+→ compliance
+→ flags
+→ explanation
+→ risk/score
 
 ---
 
-# 1. Universal Extraction Metadata
+# 2. Universal Upstream Handoff
 
-These are required for every submitted document.
+Required for every document:
 
 | Field | Type | Required |
 |---|---|---|
 | document_id | E | YES |
+| bidder_id / submission_id | E | YES |
 | document_type | E | YES |
-| page_count | E | YES |
-| document_number | E | Only if relevant/present |
-| issuer | E | Only if relevant/present |
-| issue_date | E | Only if relevant/present |
-| expiry_date | E | Only if relevant/present |
+| extracted_fields | E | YES |
+| ocr_confidence | E | YES |
 
-## Every required extracted field must also carry:
+For each extracted field, preserve:
+
+| Field | Required | Purpose |
+|---|---|---|
+| value | YES | Extracted value |
+| confidence | YES | Extraction confidence |
+| document_id | YES | Evidence reference |
+| page | Preferred | Evidence location |
+| bounding_box | Optional | UI/audit highlighting |
+
+Do NOT extract arbitrary fields simply because they exist in the document.
+
+---
+
+# 3. Bidder Identity
+
+## Upstream Required Fields
 
 | Field | Purpose |
 |---|---|
-| value | Extracted value |
-| confidence | Extraction confidence |
-| document_id | Source document |
-| page | Source page |
-| bounding_box | Source location |
+| legal_name | Primary bidder identity |
+| entity_type | Company/LLP/proprietorship/etc. |
+| registered_address | Identity/address matching |
 
-Do NOT extract arbitrary document fields just because they exist.
+These should be extracted from the bidder's primary identity/submission
+documents where available.
 
----
+## Government / authoritative data
 
-# 2. Bidder Identity
-
-Required because multiple capabilities must be cross-checked against
-the bidder.
-
-| Field | Type |
-|---|---|
-| legal_name | E |
-| entity_type | E |
-| registered_address | E |
-
-Only extract trade name/state/city if they are specifically needed by
-a verification rule.
-
----
-
-# 3. GST
-
-## Extract from bidder documents
-
-| Field | Type |
-|---|---|
-| gstin | E |
-| legal_name | E |
-| registered_address | E |
-
-These are the only GST fields required from the upstream team.
-
-## Stream A obtains separately
-
-- GST registration status
 - verified legal name
-- verified address
-- other portal truth required by the verification rule
-- return/filling compliance where applicable
+- entity type
+- registered address
+- relevant registration identity
 
-## Engine evaluates
+## Engine checks
+
+- bidder identity consistency
+- entity-type consistency
+- address consistency
+- identity matching across all sources
+
+---
+
+# 4. GST / GSTN
+
+The PS explicitly requires GST registration AND return-filing verification.
+
+## Upstream Required Fields
+
+From GST registration evidence:
+
+| Field |
+|---|
+| gstin |
+| legal_name |
+
+From GST return evidence, ONLY if submitted and relevant:
+
+| Field |
+|---|
+| return_period |
+| filing_status |
+
+Do not extract the entire GST certificate or entire return.
+
+## Government / authoritative data
 
 - GSTIN validity
-- GST identity match
-- GST status
-- tender-specific GST requirements
+- registration status
+- registered legal name
+- registration date
+- return-filing status
+- relevant return periods
+
+Only retrieve additional GST attributes when a tender rule actually needs them.
+
+## Engine checks
+
+- GSTIN valid
+- GST registration active
+- GST identity matches bidder
+- required return filing satisfied
+- GST requirement applicable
 
 ---
 
-# 4. PAN / Income Tax
+# 5. PAN / Income Tax
 
-## Extract
+The PS explicitly requires PAN and Income Tax compliance.
 
-| Field | Type |
-|---|---|
-| pan_number | E |
-| name_on_pan | E |
+## Upstream Required Fields
 
-For submitted ITR evidence:
+From PAN evidence:
 
-| Field | Type |
-|---|---|
-| assessment_year | E |
-| financial_year | E |
-| relevant_income/financial_value | E |
+| Field |
+|---|
+| pan_number |
+| name_on_pan |
 
-Only extract the financial values that are actually used by a configured
-tender rule.
+From ITR/tax evidence, only fields required by the applicable tender rule:
 
-Do NOT extract the entire ITR.
+| Field |
+|---|
+| assessment_year |
+| financial_year |
+| relevant_income_value |
 
-## Stream A verifies
+Do NOT extract an entire ITR.
+
+## Government / authoritative data
+
+- PAN validity/status
+- PAN-linked identity
+- relevant Income Tax/ITR filing information
+- relevant assessment year
+- applicable tax compliance information
+
+## Engine checks
 
 - PAN validity
-- PAN identity
-- required ITR availability/status
-- applicable tax requirements
+- PAN identity match
+- required ITR present
+- required assessment year covered
+- tax requirement satisfied
 
 ---
 
-# 5. Udyam / MSME
+# 6. Udyam / MSME
 
-## Extract
+## Upstream Required Fields
 
-| Field | Type |
-|---|---|
-| udyam_registration_number | E |
-| enterprise_name | E |
-| enterprise_category | E |
+| Field |
+|---|
+| udyam_registration_number |
+| enterprise_name |
+| enterprise_category |
 
-These are the core fields needed for Udyam verification.
+Nothing else is required from the Udyam document unless a tender rule
+specifically needs it.
 
-Registration date/address/activity should NOT be required from upstream
-unless a specific rule uses them.
+## Government / authoritative data
 
-## Stream A verifies
-
-- registration existence
-- status
+- registration validity/status
 - enterprise identity
-- MSME category
-- applicability/exemption
+- enterprise category
+- other required registration information
+
+## Engine checks
+
+- Udyam registration valid
+- enterprise identity matches bidder
+- MSME category satisfies tender requirement
+- applicable MSME exemption/benefit
 
 ---
 
-# 6. Financial Documents
+# 7. Financial Capacity
 
-## Extract only
+Financial eligibility is treated as a tender-specific capability.
 
-| Field | Type |
+## Upstream Required Fields
+
+Only extract financial values that the tender/rule configuration can consume.
+
+Core fields:
+
+| Field |
+|---|
+| financial_year |
+| turnover |
+| net_worth |
+
+Conditional fields:
+
+| Field | When needed |
 |---|---|
-| financial_year | E |
-| turnover | E |
-| net_worth | E |
+| profit_after_tax | If tender/rule requires |
+| total_assets | If tender/rule requires |
+| total_liabilities | If tender/rule requires |
+| current_assets | If tender/rule requires |
+| current_liabilities | If tender/rule requires |
+| solvency_indicator | If tender/rule requires |
+| audited | If tender requires audited evidence |
 
-Additional financial values should only be extracted when required by an
-actual tender rule.
+Do NOT extract an entire balance sheet by default.
 
-Examples that may be enabled later:
+Multiple financial years MUST be preserved.
 
-- profit_after_tax
-- total_assets
-- total_liabilities
+Example:
 
-Do NOT extract an entire balance sheet into the handoff.
+annual_turnovers:
+- FY 2023-24 → value
+- FY 2024-25 → value
+- FY 2025-26 → value
 
-## Stream A derives
+## Engine derives
 
-- threshold comparisons
 - required financial period
-- average turnover where required
-- financial consistency checks
+- turnover threshold comparison
+- average turnover
+- net-worth threshold
+- solvency requirement
+- financial consistency
 
 ---
 
-# 7. CA / UDIN
+# 8. CA / UDIN
 
-## Extract
+Conditional: only relevant where tender evidence requires a CA-certified
+document.
 
-| Field | Type |
-|---|---|
-| udin | E |
-| certificate_type | E |
-| certificate_date | E |
-| ca_name | E |
+## Upstream Required Fields
 
-Only these fields are required for the verification flow.
+| Field |
+|---|
+| udin |
+| certificate_type |
+| certificate_date |
+| ca_name |
 
-## Stream A verifies
+Only extract additional certificate information if needed to establish what
+the certificate certifies.
+
+## Government / authoritative verification
 
 - UDIN validity
-- certificate relevance
-- certificate/financial evidence relationship
+- certificate authenticity where supported
+
+## Engine checks
+
+- UDIN present
+- UDIN valid
+- certificate corresponds to required claim
 
 ---
 
-# 8. MCA21
+# 9. MCA21
 
-## Extract
+The PS explicitly identifies MCA21 as a relevant source.
 
-| Field | Type |
+## Upstream Required Fields
+
+From company-registration evidence:
+
+| Field |
+|---|
+| cin |
+| company_name |
+
+Conditional:
+
+| Field | When needed |
 |---|---|
-| cin | E |
-| company_name | E |
+| date_of_incorporation | Tender has company-age requirement |
+| registered_address | Address matching required |
+| director_dins | Tender has director-related requirement |
 
-Only extract the following when a tender rule actually needs them:
+Do NOT extract an entire MCA company profile.
 
-| Field | Type |
-|---|---|
-| registered_address | E |
-| date_of_incorporation | E |
-| director_identifiers | E |
+## Government / authoritative data
 
-Do NOT extract the entire MCA company profile.
-
-## Stream A verifies
-
-- CIN/company existence
-- company identity
+- company existence
+- company name
 - company status
-- incorporation requirement
-- tender-specific company/director conditions
+- entity type
+- incorporation date
+- registered office
+- directors where required
+
+## Engine checks
+
+- CIN valid
+- company identity matches bidder
+- company status satisfies requirement
+- incorporation-age requirement
+- director requirement where applicable
 
 ---
 
-# 9. Make in India / Local Content
+# 10. Make in India / Local Content
 
-## Extract
+The PS explicitly requires local-content checks.
 
-| Field | Type |
+## Upstream Required Fields
+
+From bidder declaration/certificate:
+
+| Field |
+|---|
+| local_content_percentage |
+| supplier_class |
+| country_of_origin |
+
+Conditional:
+
+| Field | When needed |
 |---|---|
-| local_content_percentage | E |
-| supplier_class | E |
-| country_of_origin | E |
+| manufacturing_location | Local manufacturing rule requires it |
+| local_content_certificate | Certification is submitted |
+| calculation_basis | Engine needs to validate declared percentage |
 
-Only extract manufacturer/manufacturing-location information when the
-tender's local-content rule requires it.
+Do NOT extract an entire Make-in-India declaration.
 
-## Stream A obtains
+## Tender-derived data
 
-- required local-content percentage
+- required local content
 - required supplier class
 - applicable policy/rule
 
-## Engine evaluates
+## Engine checks
 
-    bidder declaration
-            vs
-    tender requirement
+- local content ≥ requirement
+- supplier class satisfies requirement
+- origin consistency
+- supporting evidence present
+- declaration consistent with evidence
 
 ---
 
-# 10. EPFO
+# 11. EPFO
 
-## Extract
+## Upstream Required Fields
 
-| Field | Type |
-|---|---|
-| establishment_code | E |
-| establishment_name | E |
+| Field |
+|---|
+| epfo_establishment_code |
+| establishment_name |
 
-## Stream A verifies
+## Government / authoritative data
 
 - establishment existence
 - status
 - identity
+- registration information where required
 
-No other EPFO fields are required from upstream unless a rule later needs them.
+## Engine checks
+
+- EPFO requirement applicable
+- registration exists
+- status satisfies requirement
+- identity matches bidder
 
 ---
 
-# 11. ESIC
+# 12. ESIC
 
-## Extract
+## Upstream Required Fields
 
-| Field | Type |
-|---|---|
-| esic_code | E |
-| employer_name | E |
+| Field |
+|---|
+| esic_code |
+| employer_name |
 
-## Stream A verifies
+## Government / authoritative data
 
 - employer existence
 - status
 - identity
+- registration information where required
+
+## Engine checks
+
+- ESIC requirement applicable
+- registration exists
+- status satisfies requirement
+- employer identity matches bidder
 
 ---
 
-# 12. Startup India / DPIIT
+# 13. Startup India / DPIIT
 
-## Extract
+The PS explicitly mentions Startup India and BIS/DPIIT.
 
-| Field | Type |
+## Upstream Required Fields
+
+| Field |
+|---|
+| dpiit_recognition_number |
+| startup_name |
+
+Conditional:
+
+| Field | When needed |
 |---|---|
-| dpiit_recognition_number | E |
-| startup_name | E |
+| recognition_date | Tender/rule depends on recognition date |
+| recognition_certificate | Supporting certificate is required |
 
-Only extract recognition date/certificate reference if required for a specific
-verification rule.
+## Government / authoritative data
 
-## Stream A verifies
+- recognition validity
+- recognition status
+- startup identity
+- relevant DPIIT information
 
-- recognition
-- status
-- bidder identity
-- applicable startup exemption
+## Engine checks
+
+- recognition exists
+- recognition valid
+- startup identity matches bidder
+- startup-specific eligibility/exemption satisfied
 
 ---
 
-# 13. NSIC
+# 14. NSIC
 
-## Extract
+The PS explicitly requires NSIC verification.
 
-| Field | Type |
+## Upstream Required Fields
+
+| Field |
+|---|
+| nsic_registration_number |
+| certificate_number |
+| valid_until |
+| scope/category |
+
+Conditional:
+
+| Field | When needed |
 |---|---|
-| registration_number | E |
-| certificate_number | E |
-| valid_until | E |
-| scope/category | E |
+| monetary_limit | Tender/rule depends on NSIC limit |
 
-These are needed to determine whether the submitted NSIC evidence covers
-the requirement.
-
-## Stream A verifies
+## Government / authoritative data
 
 - registration validity
-- identity
-- scope
-- applicability
+- status
+- scope/category
+- applicable limit
+
+## Engine checks
+
+- NSIC registration valid
+- identity matches bidder
+- scope covers tender requirement
+- applicable limit satisfied
 
 ---
 
-# 14. BIS
+# 15. BIS
 
-BIS is conditional.
+BIS is conditional and should NOT be extracted for every bidder.
 
-If the bidder submits BIS evidence AND the tender requires BIS:
+## Upstream Required Fields
 
-## Extract
+If BIS evidence is actually submitted AND applicable:
 
-| Field | Type |
+| Field |
+|---|
+| licence_number |
+| product_name |
+| manufacturer_name |
+| is_number / applicable_standard |
+
+Conditional:
+
+| Field | When needed |
 |---|---|
-| licence_number | E |
-| product_name | E |
-| manufacturer | E |
-| IS_number | E |
+| validity | If validity is required |
+| registration_number | If registration/CRS applies |
+| certificate_number | If certificate-of-conformity is used |
 
-Do NOT extract a complete BIS certificate.
+Do NOT extract the entire BIS certificate.
 
-## Stream A verifies
+## Government / authoritative data
 
 - licence/registration validity
-- product coverage
 - manufacturer
+- covered product
 - applicable standard
+- certification scope
+
+## Engine checks
+
+- BIS requirement applicable
+- certification exists
+- certification valid
+- correct product covered
+- correct manufacturer
+- correct standard covered
 
 ---
 
-# 15. DigiLocker
+# 16. DigiLocker
 
-DigiLocker is a document verification mechanism, not a bidder qualification.
+DigiLocker is a verification/document-access mechanism, not a separate
+eligibility criterion.
 
-The upstream team only needs to identify the relevant document.
+## Upstream Required Fields
 
-## Required
+The upstream team only needs to identify the relevant submitted document:
 
-| Field | Type |
-|---|---|
-| document_id | E |
-| document_type | E |
+| Field |
+|---|
+| document_id |
+| document_type |
 
-The verification layer handles DigiLocker/source verification and obtains:
+If the document was retrieved through DigiLocker, preserve its normal
+document evidence.
+
+## Government / authoritative verification
 
 - issuer
-- verification status
 - document reference
-- authenticity evidence
+- authenticity/verification status
+- issued date where relevant
+
+## Engine checks
+
+- retrieved document corresponds to submitted evidence
+- issuer valid
+- verification successful
 
 Do NOT create a large DigiLocker-specific bidder schema.
 
 ---
 
-# 16. OEM Authorization
+# 17. OEM Authorization
 
-## Extract
+The PS explicitly requires OEM authorization verification.
 
-| Field | Type |
-|---|---|
-| oem_name | E |
-| authorized_bidder | E |
-| authorized_product | E |
-| authorization_number | E |
-| valid_until | E |
+## Upstream Required Fields
 
-Only these fields are required for our OEM checks.
+| Field |
+|---|
+| oem_name |
+| authorized_bidder |
+| authorized_product |
+| authorization_number |
+| authorization_date |
+| valid_until |
 
-## Stream A evaluates
+These are the minimum fields required to determine whether the authorization
+covers the bidder, product and bid period.
 
-- correct OEM
-- correct bidder
-- correct product
-- authorization validity
+## Engine checks
+
+- authorization exists
+- OEM identity matches required manufacturer
+- authorized bidder matches bidder
+- authorized product matches tendered product
+- authorization is valid for bid
+
+---
+
+# 18. Blacklisting / Debarment
+
+The PS explicitly requires blacklisting/debarment identification.
+
+## Upstream Required Fields
+
+From bidder declaration/order evidence:
+
+| Field |
+|---|
+| declaration_status |
+| authority |
+| order_number |
+| effective_from |
+| effective_until |
+| scope |
+
+Only extract these when such evidence exists.
+
+## Government / authoritative data
+
+- active blacklisting/debarment
+- authority
+- order/reference
+- effective dates
 - scope
 
----
+## Engine checks
 
-# 17. Blacklisting / Debarment
-
-## Extract from submitted declarations/orders
-
-| Field | Type |
-|---|---|
-| declaration_status | E |
-| authority | E |
-| order_number | E |
-| effective_from | E |
-| effective_until | E |
-| scope | E |
-
-Only extract these when blacklisting/debarment evidence exists.
-
-## Stream A separately verifies
-
-- applicable exclusion sources
-- active status
-- dates
-- scope
+- active exclusion
+- exclusion applies to current bid
+- exclusion period active
+- scope applicable
+- historical vs active exclusion
 
 ---
 
-# 18. Tender-Specific Requirements
+# 19. Other Applicable Statutory / Tender-Specific Requirements
 
-These are NOT bidder extraction fields.
+The PS explicitly says "other applicable sources" and "other applicable
+statutory and tender-specific compliance requirements."
 
-Stream A extracts/normalizes from the tender:
+Therefore the architecture must be extensible.
 
-| Field | Type |
-|---|---|
-| requirement_id | T |
-| requirement_type | T |
-| description | T |
-| mandatory | T |
-| threshold | T |
-| comparison_operator | T |
-| required_evidence | T |
-| exemption | T |
+## Generic evidence fields
 
-These determine which bidder fields are actually relevant.
+Only for a certification/registration that the tender actually requires:
+
+| Field |
+|---|
+| identifier |
+| issuer |
+| certificate_type |
+| issue_date |
+| valid_until |
+| scope |
+
+Do NOT ask upstream to extract arbitrary data from unknown documents.
+
+The tender/rule engine determines what is actually required.
 
 ---
 
-# 19. Multiple Values
+# 20. Tender Requirement Model
 
-The upstream team must preserve multiple relevant values.
+Tender requirements are NOT upstream extraction fields.
 
-Example:
+Stream A must normalize requirements into:
 
-```json
-"turnover": [
-  {
-    "financial_year": "2023-24",
-    "value": 18.5
-  },
-  {
-    "financial_year": "2024-25",
-    "value": 22.1
-  }
-]
+| Field |
+|---|
+| requirement_id |
+| requirement_type |
+| description |
+| mandatory |
+| applicability_condition |
+| threshold |
+| comparison_operator |
+| required_document |
+| required_source |
+| exemption |
+| exemption_conditions |
+
+Examples:
+
+- GST required
+- GST returns required
+- minimum turnover
+- minimum net worth
+- MSME requirement
+- startup exemption
+- local-content threshold
+- OEM authorization
+- BIS certification
+- experience requirement
+- geographic requirement
+- non-blacklisting requirement
+- statutory registration
+- financial requirement
+
+---
+
+# 21. Cross-Document Verification
+
+The engine must compare information across submitted documents and
+authoritative sources.
+
+Core comparisons:
+
+- bidder name
+- entity type
+- PAN identity
+- GST identity
+- Udyam identity
+- MCA identity
+- EPFO/ESIC identity
+- Startup/DPIIT identity
+- OEM authorized bidder
+- product identity
+- manufacturer identity
+- financial values
+- important dates
+- registration identifiers
+
+The engine must NOT require upstream to calculate these comparisons.
+
+---
+
+# 22. Cross-Bidder / Duplicate Evidence Detection
+
+The platform should also detect suspicious reuse across bidders.
+
+Examples:
+
+- same OEM authorization reused
+- same certificate/document submitted by multiple bidders
+- near-identical declaration documents
+- identifiers associated with multiple bidders
+- suspiciously identical supporting evidence
+
+This requires access to the original document/OCR representation through
+`document_id`.
+
+It does NOT require the upstream team to create additional extracted fields.
+
+---
+
+# 23. Verification Status Model
+
+The engine must distinguish:
+
+```text
+PASS
+FAIL
+MISSING
+UNVERIFIABLE
+NOT_APPLICABLE
+WARNING
+NOT_CHECKED
