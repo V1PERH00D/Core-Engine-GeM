@@ -1,4 +1,10 @@
-from compliance_engine.models import Applicability, ComplianceResult, Evidence, Requirement
+from compliance_engine.models import (
+    Applicability,
+    Capability,
+    ComplianceResult,
+    Evidence,
+    Requirement,
+)
 from compliance_engine.rules import GSTRegistrationRule
 from compliance_engine.rules.base import Rule
 from compliance_engine.verification import MockGSTProvider
@@ -65,7 +71,7 @@ def test_evaluate_returns_compliance_result() -> None:
     rule = GSTRegistrationRule()
     requirement = Requirement(
         requirement_id="req-gst-registration-001",
-        capability="GST",
+        capability=Capability.GST,
         description="GST registration must be valid and active.",
         mandatory=True,
         applicability=Applicability.APPLICABLE,

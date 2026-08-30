@@ -6,7 +6,7 @@ import re
 from typing import Any
 
 from compliance_engine.flags import get_flag_definition
-from compliance_engine.models import Evidence, IdentityFinding
+from compliance_engine.models import Capability, Evidence, IdentityFinding
 
 CROSS_DOCUMENT_IDENTITY_MISMATCH = get_flag_definition(
     "CROSS_DOCUMENT_IDENTITY_MISMATCH"
@@ -181,7 +181,7 @@ def verify_cross_document_identity(evidence: list[Evidence]) -> list[IdentityFin
         return [
             IdentityFinding(
                 flag_id=canonical_flag_id,
-                capability="Bidder Identity",
+                capability=Capability.BIDDER_IDENTITY,
                 message=(
                     f"Identity-bearing fields differ after normalization: "
                     f"{left.document_type}:{left.field_name}={left_value!r} vs "

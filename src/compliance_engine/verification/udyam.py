@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any, Final
 
-from compliance_engine.models import Verification, VerificationStatus
+from compliance_engine.models import Capability, Verification, VerificationStatus
 from compliance_engine.verification.base import VerificationProvider
 
 
@@ -13,7 +13,7 @@ class MockUdyamProvider(VerificationProvider):
     """In-memory Udyam lookup for deterministic tests."""
 
     SOURCE: Final[str] = "UDYAM_MOCK"
-    CAPABILITY: Final[str] = "UDYAM"
+    CAPABILITY: Final[Capability] = Capability.UDYAM
     RETRIEVED_AT: Final[datetime] = datetime(2026, 1, 1, tzinfo=UTC)
 
     UDYAM_VERIFIED: Final[str] = "UDYAM-MH-12-0019842"

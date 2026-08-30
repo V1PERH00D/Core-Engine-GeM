@@ -1,4 +1,10 @@
-from compliance_engine.models import Applicability, ComplianceStatus, Evidence, Requirement
+from compliance_engine.models import (
+    Applicability,
+    Capability,
+    ComplianceStatus,
+    Evidence,
+    Requirement,
+)
 from compliance_engine.rules import UdyamRegistrationRule
 from compliance_engine.verification import MockUdyamProvider
 
@@ -6,7 +12,7 @@ from compliance_engine.verification import MockUdyamProvider
 def _requirement() -> Requirement:
     return Requirement(
         requirement_id="req-udyam-registration-001",
-        capability="UDYAM",
+        capability=Capability.UDYAM,
         description="Udyam registration must be valid and active.",
         mandatory=True,
         applicability=Applicability.APPLICABLE,

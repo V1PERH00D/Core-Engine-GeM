@@ -12,6 +12,7 @@ from compliance_engine.flags import (
 )
 from compliance_engine.models import (
     Applicability,
+    Capability,
     Evidence,
     Requirement,
 )
@@ -69,7 +70,7 @@ def test_unknown_flag_lookup_fails_clearly() -> None:
 def test_gst_rule_flag_remains_valid() -> None:
     requirement = Requirement(
         requirement_id="req-gst-registration-001",
-        capability="GST",
+        capability=Capability.GST,
         description="GST registration must be valid and active.",
         mandatory=True,
         applicability=Applicability.APPLICABLE,
@@ -85,7 +86,7 @@ def test_gst_rule_flag_remains_valid() -> None:
 def test_null_gstin_flag_remains_valid() -> None:
     requirement = Requirement(
         requirement_id="req-gst-registration-001",
-        capability="GST",
+        capability=Capability.GST,
         description="GST registration must be valid and active.",
         mandatory=True,
         applicability=Applicability.APPLICABLE,

@@ -3,6 +3,7 @@ from typing import Any
 
 from compliance_engine.models import (
     Applicability,
+    Capability,
     ComplianceStatus,
     Evidence,
     Requirement,
@@ -18,7 +19,7 @@ RULE_ID = "GST_REGISTRATION_001"
 def _requirement() -> Requirement:
     return Requirement(
         requirement_id="req-gst-registration-001",
-        capability="GST",
+        capability=Capability.GST,
         description="GST registration must be valid and active.",
         mandatory=True,
         applicability=Applicability.APPLICABLE,
@@ -48,7 +49,7 @@ class _UnavailableGSTProvider(VerificationProvider):
         return Verification(
             verification_id=f"GSTN_MOCK:{identifier}",
             bidder_id=bidder_id,
-            capability="GST",
+            capability=Capability.GST,
             source="GSTN_MOCK",
             queried_identifier=identifier,
             status=VerificationStatus.UNAVAILABLE,

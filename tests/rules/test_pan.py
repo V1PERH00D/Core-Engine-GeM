@@ -1,4 +1,10 @@
-from compliance_engine.models import Applicability, ComplianceStatus, Evidence, Requirement
+from compliance_engine.models import (
+    Applicability,
+    Capability,
+    ComplianceStatus,
+    Evidence,
+    Requirement,
+)
 from compliance_engine.rules import PANValidationRule
 from compliance_engine.verification import MockPANProvider
 
@@ -6,7 +12,7 @@ from compliance_engine.verification import MockPANProvider
 def _requirement() -> Requirement:
     return Requirement(
         requirement_id="req-pan-validation-001",
-        capability="PAN",
+        capability=Capability.PAN_INCOME_TAX,
         description="PAN must be valid and active.",
         mandatory=True,
         applicability=Applicability.APPLICABLE,

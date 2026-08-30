@@ -3,7 +3,7 @@ from compliance_engine.anomalies.identity import (
     normalize_identity_name,
     verify_cross_document_identity,
 )
-from compliance_engine.models import Evidence
+from compliance_engine.models import Capability, Evidence
 
 
 def _evidence(
@@ -98,7 +98,7 @@ def test_conflicting_names_produce_cross_document_identity_mismatch() -> None:
     assert len(findings) == 1
     finding = findings[0]
     assert finding.flag_id == CROSS_DOCUMENT_IDENTITY_MISMATCH
-    assert finding.capability == "Bidder Identity"
+    assert finding.capability == Capability.BIDDER_IDENTITY
     assert finding.evidence_refs == ["ev-1", "ev-2"]
     assert finding.normalized_values == ["acme enterprises private limited", "acme trading private limited"]
 

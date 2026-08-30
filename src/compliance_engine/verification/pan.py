@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any, Final
 
-from compliance_engine.models import Verification, VerificationStatus
+from compliance_engine.models import Capability, Verification, VerificationStatus
 from compliance_engine.verification.base import VerificationProvider
 
 
@@ -13,7 +13,7 @@ class MockPANProvider(VerificationProvider):
     """In-memory PAN lookup for deterministic tests."""
 
     SOURCE: Final[str] = "PAN_MOCK"
-    CAPABILITY: Final[str] = "PAN"
+    CAPABILITY: Final[Capability] = Capability.PAN_INCOME_TAX
     RETRIEVED_AT: Final[datetime] = datetime(2026, 1, 1, tzinfo=UTC)
 
     PAN_VERIFIED: Final[str] = "AAACI1234F"

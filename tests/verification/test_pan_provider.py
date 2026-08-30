@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from compliance_engine.models import Verification, VerificationStatus
+from compliance_engine.models import Capability, Verification, VerificationStatus
 from compliance_engine.verification import MockPANProvider
 
 
@@ -8,7 +8,7 @@ def test_provider_verifies_active_pan() -> None:
     result = MockPANProvider().verify("bidder_acme_01", MockPANProvider.PAN_VERIFIED)
     assert isinstance(result, Verification)
     assert result.status is VerificationStatus.VERIFIED
-    assert result.capability == "PAN"
+    assert result.capability == Capability.PAN_INCOME_TAX
     assert result.data["pan_status"] == "ACTIVE"
     assert result.data["name_on_pan"] == "ACME ENTERPRISES PRIVATE LIMITED"
 

@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from datetime import UTC, datetime
 from typing import Any, Final
 
-from compliance_engine.models import Verification, VerificationStatus
+from compliance_engine.models import Capability, Verification, VerificationStatus
 
 
 class VerificationProvider(ABC):
@@ -23,7 +23,7 @@ class MockGSTProvider(VerificationProvider):
     """In-memory GST lookup for tests. Does not call any network API."""
 
     SOURCE: Final[str] = "GSTN_MOCK"
-    CAPABILITY: Final[str] = "GST"
+    CAPABILITY: Final[Capability] = Capability.GST
     RETRIEVED_AT: Final[datetime] = datetime(2026, 1, 1, tzinfo=UTC)
 
     GSTIN_VERIFIED: Final[str] = "27AAACI1234F1Z5"

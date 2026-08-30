@@ -5,6 +5,7 @@ from pydantic import ValidationError
 
 from compliance_engine.models import (
     Applicability,
+    Capability,
     ComplianceResult,
     ComplianceStatus,
     Evidence,
@@ -76,7 +77,7 @@ def test_verification_valid_construction() -> None:
     record = Verification(
         verification_id="ver-gst-001",
         bidder_id="bidder_acme_01",
-        capability="GST",
+        capability=Capability.GST,
         source="GSTN",
         queried_identifier="27AAACI1234F1Z5",
         status=VerificationStatus.VERIFIED,
@@ -93,7 +94,7 @@ def test_verification_rejects_invalid_status() -> None:
             {
                 "verification_id": "ver-gst-001",
                 "bidder_id": "bidder_acme_01",
-                "capability": "GST",
+                "capability": Capability.GST,
                 "source": "GSTN",
                 "status": "PASS",
                 "data": {},
@@ -105,7 +106,7 @@ def test_verification_rejects_invalid_status() -> None:
 def test_requirement_basic_construction() -> None:
     requirement = Requirement(
         requirement_id="req-turnover-001",
-        capability="FINANCIAL_CAPACITY",
+        capability=Capability.FINANCIAL,
         description="Minimum average annual turnover for specified financial years.",
         mandatory=True,
         applicability=Applicability.APPLICABLE,
@@ -119,6 +120,7 @@ def test_requirement_basic_construction() -> None:
     assert requirement.mandatory is True
     assert requirement.applicability is Applicability.APPLICABLE
     assert requirement.rule_id == "FIN_TURNOVER_001"
+    assert requirement.capability == Capability.FINANCIAL
 
 
 def test_requirement_rejects_invalid_applicability() -> None:
@@ -126,7 +128,7 @@ def test_requirement_rejects_invalid_applicability() -> None:
         Requirement.model_validate(
             {
                 "requirement_id": "req-turnover-001",
-                "capability": "FINANCIAL_CAPACITY",
+                "capability": Capability.FINANCIAL,
                 "description": "Minimum turnover.",
                 "mandatory": True,
                 "applicability": "MAYBE",
@@ -138,7 +140,7 @@ def test_requirement_rejects_invalid_applicability() -> None:
 def test_compliance_result_basic_construction() -> None:
     result = ComplianceResult(
         requirement_id="req-turnover-001",
-        capability="FINANCIAL_CAPACITY",
+        capability=Capability.FINANCIAL,
         status=ComplianceStatus.FAIL,
         reason="Extracted turnover is below the tender threshold.",
         expected=25,
@@ -150,6 +152,7 @@ def test_compliance_result_basic_construction() -> None:
     )
     assert result.status is ComplianceStatus.FAIL
     assert result.evidence_refs == ["ev-turnover-001"]
+    assert result.capability == Capability.FINANCIAL
 
 
 def test_compliance_result_rejects_invalid_status() -> None:
@@ -157,7 +160,7 @@ def test_compliance_result_rejects_invalid_status() -> None:
         ComplianceResult.model_validate(
             {
                 "requirement_id": "req-turnover-001",
-                "capability": "FINANCIAL_CAPACITY",
+                "capability": Capability.FINANCIAL,
                 "status": "VERIFIED",
                 "reason": "not a compliance status",
                 "rule_id": "FIN_TURNOVER_001",

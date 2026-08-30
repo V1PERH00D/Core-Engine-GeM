@@ -1,4 +1,4 @@
-from compliance_engine.models import Verification, VerificationStatus
+from compliance_engine.models import Capability, Verification, VerificationStatus
 from compliance_engine.verification import MockGSTProvider, VerificationProvider
 
 
@@ -40,5 +40,5 @@ def test_provider_returns_verification_model() -> None:
     assert isinstance(result, Verification)
     assert result.bidder_id == "bidder_acme_01"
     assert result.source == "GSTN_MOCK"
-    assert result.capability == "GST"
+    assert result.capability == Capability.GST
     assert result.queried_identifier == MockGSTProvider.GSTIN_VERIFIED

@@ -1,4 +1,4 @@
-from compliance_engine.models import Verification, VerificationStatus
+from compliance_engine.models import Capability, Verification, VerificationStatus
 from compliance_engine.verification import MockUdyamProvider
 
 
@@ -6,7 +6,7 @@ def test_provider_verified_active_udyam() -> None:
     result = MockUdyamProvider().verify("bidder_acme_01", MockUdyamProvider.UDYAM_VERIFIED)
     assert isinstance(result, Verification)
     assert result.status is VerificationStatus.VERIFIED
-    assert result.capability == "UDYAM"
+    assert result.capability == Capability.UDYAM
     assert result.data["registration_status"] == "ACTIVE"
     assert result.data["enterprise_name"] == "ACME ENTERPRISES PRIVATE LIMITED"
     assert result.data["enterprise_category"] == "Medium"

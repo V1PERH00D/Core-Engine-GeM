@@ -4,6 +4,7 @@ from typing import Any
 
 from compliance_engine.models import (
     Applicability,
+    Capability,
     ComplianceStatus,
     Evidence,
     Requirement,
@@ -27,7 +28,7 @@ from compliance_engine.verification import (
 def _gst_requirement() -> Requirement:
     return Requirement(
         requirement_id="req-gst-001",
-        capability="GST",
+        capability=Capability.GST,
         description="GST registration must be valid.",
         mandatory=True,
         applicability=Applicability.APPLICABLE,
@@ -39,7 +40,7 @@ def _gst_requirement() -> Requirement:
 def _pan_requirement() -> Requirement:
     return Requirement(
         requirement_id="req-pan-001",
-        capability="PAN",
+        capability=Capability.PAN_INCOME_TAX,
         description="PAN must be valid.",
         mandatory=True,
         applicability=Applicability.APPLICABLE,
@@ -51,7 +52,7 @@ def _pan_requirement() -> Requirement:
 def _udyam_requirement() -> Requirement:
     return Requirement(
         requirement_id="req-udyam-001",
-        capability="Udyam / MSME",
+        capability=Capability.UDYAM,
         description="Udyam registration must be valid.",
         mandatory=True,
         applicability=Applicability.APPLICABLE,
