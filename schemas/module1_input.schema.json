@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Module 1 upstream input",
+  "description": "Document-oriented upstream extraction payload for bid compliance verification.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["submission_id", "bidder_id", "documents"],
+  "properties": {
+    "submission_id": {
+      "type": "string"
+    },
+    "bidder_id": {
+      "type": "string"
+    },
+    "documents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/document"
+      }
+    }
+  },
+  "$defs": {
+    "document": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "document_id",
+        "doc_type",
+        "doc_type_confidence",
+        "ocr_confidence",
+        "extracted_fields"
+      ],
+      "properties": {
+        "document_id": {
+          "type": "string"
+        },
+        "doc_type": {
+          "type": "string"
+        },
+        "doc_type_confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "ocr_confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "file_hash": {
+          "type": "string"
+        },
+        "extracted_fields": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/extractedField"
+          }
+        },
+        "grounding": {
+          "$ref": "#/$defs/grounding"
+        }
+      }
+    },
+    "extractedField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "confidence"],
+      "properties": {
+        "value": true,
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "page": {
+          "type": ["integer", "null"]
+        },
+        "bbox": {
+          "oneOf": [
+            {
+              "type": "array",
+              "minItems": 4,
+              "maxItems": 4,
+              "items": {
+                "type": "number"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "missing_reason": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "grounding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field_confidence",
+        "overall_grounding_score",
+        "is_reliable"
+      ],
+      "properties": {
+        "field_confidence": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "overall_grounding_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "is_reliable": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

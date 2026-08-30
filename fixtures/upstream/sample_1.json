@@ -1,0 +1,304 @@
+{
+  "submission_id": "sub_compliant_001",
+  "bidder_id": "bidder_acme_01",
+  "documents": [
+    {
+      "document_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+      "doc_type": "GST",
+      "doc_type_confidence": 0.98,
+      "ocr_confidence": 0.95,
+      "file_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "extracted_fields": {
+        "gstin": {
+          "value": "27AAACI1234F1Z5",
+          "confidence": 0.99,
+          "page": 1,
+          "bbox": [50.0, 100.0, 250.0, 120.0]
+        },
+        "legal_name": {
+          "value": "ACME ENTERPRISES PRIVATE LIMITED",
+          "confidence": 0.96,
+          "page": 1,
+          "bbox": [55.0, 100.0, 280.0, 130.0]
+        },
+        "registered_address": {
+          "value": "Plot 42, Hinjawadi Phase 1, Pune, Maharashtra 411057",
+          "confidence": 0.92,
+          "page": 1,
+          "bbox": [70.0, 100.0, 320.0, 160.0]
+        }
+      },
+      "grounding": {
+        "field_confidence": {
+          "gstin": 0.99,
+          "legal_name": 0.96,
+          "registered_address": 0.92
+        },
+        "overall_grounding_score": 0.96,
+        "is_reliable": true
+      }
+    },
+    {
+      "document_id": "8a2ceb3c-2a6c-4c9c-8acc-1a0c6a2cba5c",
+      "doc_type": "PAN",
+      "doc_type_confidence": 0.99,
+      "ocr_confidence": 0.97,
+      "file_hash": "c56d0e9a7c8b9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e",
+      "extracted_fields": {
+        "pan_number": {
+          "value": "AAACI1234F",
+          "confidence": 0.99,
+          "page": 1,
+          "bbox": [40.0, 80.0, 200.0, 100.0]
+        },
+        "name_on_pan": {
+          "value": "ACME ENTERPRISES PRIVATE LIMITED",
+          "confidence": 0.97,
+          "page": 1,
+          "bbox": [45.0, 80.0, 220.0, 110.0]
+        }
+      },
+      "grounding": {
+        "field_confidence": {
+          "pan_number": 0.99,
+          "name_on_pan": 0.97
+        },
+        "overall_grounding_score": 0.98,
+        "is_reliable": true
+      }
+    },
+    {
+      "document_id": "7b3dfc2b-1b5b-4d8b-7bbb-0b9b5b1ba94b",
+      "doc_type": "ITR",
+      "doc_type_confidence": 0.95,
+      "ocr_confidence": 0.92,
+      "file_hash": "e5f6a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c",
+      "extracted_fields": {
+        "assessment_year": {
+          "value": "2024-25",
+          "confidence": 0.96,
+          "page": 1,
+          "bbox": [35.0, 50.0, 150.0, 70.0]
+        },
+        "financial_year": {
+          "value": "2023-24",
+          "confidence": 0.96,
+          "page": 1,
+          "bbox": [55.0, 50.0, 150.0, 90.0]
+        },
+        "filing_status": {
+          "value": "FILED",
+          "confidence": 0.94,
+          "page": 1,
+          "bbox": [75.0, 50.0, 180.0, 110.0]
+        },
+        "filing_date": {
+          "value": "2024-07-28",
+          "confidence": 0.93,
+          "page": 1,
+          "bbox": [95.0, 50.0, 200.0, 130.0]
+        }
+      },
+      "grounding": {
+        "field_confidence": {
+          "assessment_year": 0.96,
+          "financial_year": 0.96,
+          "filing_status": 0.94,
+          "filing_date": 0.93
+        },
+        "overall_grounding_score": 0.95,
+        "is_reliable": true
+      }
+    },
+    {
+      "document_id": "6c4eeb1a-0a4a-4e7a-6aaa-9a8a4a0a983a",
+      "doc_type": "UDYAM",
+      "doc_type_confidence": 0.97,
+      "ocr_confidence": 0.94,
+      "file_hash": "f1e2d3c4b5a697887766554433221100ffeeddccbbaa99887766554433221100",
+      "extracted_fields": {
+        "udyam_registration_number": {
+          "value": "UDYAM-MH-12-0019842",
+          "confidence": 0.99,
+          "page": 1,
+          "bbox": [30.0, 50.0, 260.0, 75.0]
+        },
+        "enterprise_name": {
+          "value": "ACME ENTERPRISES PRIVATE LIMITED",
+          "confidence": 0.95,
+          "page": 1,
+          "bbox": [40.0, 50.0, 280.0, 85.0]
+        },
+        "enterprise_category": {
+          "value": "Medium",
+          "confidence": 0.98,
+          "page": 1,
+          "bbox": [60.0, 50.0, 150.0, 80.0]
+        }
+      },
+      "grounding": {
+        "field_confidence": {
+          "udyam_registration_number": 0.99,
+          "enterprise_name": 0.95,
+          "enterprise_category": 0.98
+        },
+        "overall_grounding_score": 0.97,
+        "is_reliable": true
+      }
+    },
+    {
+      "document_id": "5d5ffa09-9f3f-4f6f-5999-8f7f3f9f872f",
+      "doc_type": "BS",
+      "doc_type_confidence": 0.95,
+      "ocr_confidence": 0.92,
+      "file_hash": "a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e",
+      "extracted_fields": {
+        "annual_turnovers": {
+          "value": [
+            { "financial_year": "2022-23", "turnover": 12.5 },
+            { "financial_year": "2023-24", "turnover": 15.8 },
+            { "financial_year": "2024-25", "turnover": 18.2 }
+          ],
+          "confidence": 0.95,
+          "page": 2,
+          "bbox": [110.0, 45.0, 310.0, 180.0]
+        },
+        "net_worth": {
+          "value": 26.5,
+          "confidence": 0.94,
+          "page": 2,
+          "bbox": [190.0, 45.0, 310.0, 210.0]
+        },
+        "profit_after_tax": {
+          "value": 3.4,
+          "confidence": 0.91,
+          "page": 2,
+          "bbox": [210.0, 45.0, 300.0, 225.0]
+        },
+        "total_assets": {
+          "value": 45.0,
+          "confidence": 0.89,
+          "page": 2,
+          "bbox": [230.0, 45.0, 300.0, 245.0]
+        },
+        "total_liabilities": {
+          "value": 18.5,
+          "confidence": 0.88,
+          "page": 2,
+          "bbox": [245.0, 45.0, 300.0, 260.0]
+        },
+        "current_assets": {
+          "value": 20.0,
+          "confidence": 0.90,
+          "page": 2,
+          "bbox": [260.0, 45.0, 300.0, 275.0]
+        },
+        "current_liabilities": {
+          "value": 8.5,
+          "confidence": 0.90,
+          "page": 2,
+          "bbox": [275.0, 45.0, 300.0, 290.0]
+        },
+        "solvency_indicator": {
+          "value": true,
+          "confidence": 0.95,
+          "page": 2,
+          "bbox": [190.0, 45.0, 310.0, 210.0]
+        },
+        "audited_status": {
+          "value": true,
+          "confidence": 0.99,
+          "page": 2,
+          "bbox": [290.0, 50.0, 350.0, 310.0]
+        },
+        "ca_udin": {
+          "value": "24045678AAAAAA1234",
+          "confidence": 0.98,
+          "page": 2,
+          "bbox": [295.0, 50.0, 350.0, 315.0]
+        }
+      },
+      "grounding": {
+        "field_confidence": {
+          "annual_turnovers": 0.95,
+          "net_worth": 0.94,
+          "profit_after_tax": 0.91,
+          "total_assets": 0.89,
+          "total_liabilities": 0.88,
+          "current_assets": 0.90,
+          "current_liabilities": 0.90,
+          "solvency_indicator": 0.95,
+          "audited_status": 0.99,
+          "ca_udin": 0.98
+        },
+        "overall_grounding_score": 0.94,
+        "is_reliable": true
+      }
+    },
+    {
+      "document_id": "4e6a09f8-8e2e-4e5e-4888-7e6e2e8e761e",
+      "doc_type": "MCA21",
+      "doc_type_confidence": 0.97,
+      "ocr_confidence": 0.95,
+      "file_hash": "d1c2b3a4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e",
+      "extracted_fields": {
+        "cin": {
+          "value": "U72900MH2018PTC123456",
+          "confidence": 0.99,
+          "page": 1,
+          "bbox": [40.0, 60.0, 260.0, 80.0]
+        },
+        "company_name": {
+          "value": "ACME ENTERPRISES PRIVATE LIMITED",
+          "confidence": 0.96,
+          "page": 1,
+          "bbox": [55.0, 60.0, 290.0, 100.0]
+        },
+        "active_director_dins": {
+          "value": ["01234567", "09876543"],
+          "confidence": 0.94,
+          "page": 1,
+          "bbox": [120.0, 60.0, 200.0, 160.0]
+        }
+      },
+      "grounding": {
+        "field_confidence": {
+          "cin": 0.99,
+          "company_name": 0.96,
+          "active_director_dins": 0.94
+        },
+        "overall_grounding_score": 0.96,
+        "is_reliable": true
+      }
+    },
+    {
+      "document_id": "3f7b18e7-7d1d-4d4d-3777-6d5d1d7d650d",
+      "doc_type": "MAKE_IN_INDIA",
+      "doc_type_confidence": 0.96,
+      "ocr_confidence": 0.93,
+      "file_hash": "b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f",
+      "extracted_fields": {
+        "local_content_percentage": {
+          "value": 68.5,
+          "confidence": 0.97,
+          "page": 1,
+          "bbox": [150.0, 60.0, 250.0, 180.0]
+        },
+        "supplier_class": {
+          "value": "Class-I",
+          "confidence": 0.95,
+          "page": 1,
+          "bbox": [165.0, 60.0, 230.0, 190.0]
+        }
+      },
+      "grounding": {
+        "field_confidence": {
+          "local_content_percentage": 0.97,
+          "supplier_class": 0.95
+        },
+        "overall_grounding_score": 0.96,
+        "is_reliable": true
+      }
+    }
+  ]
+}
