@@ -53,6 +53,7 @@ class GSTRegistrationRule(Rule):
 
     rule_id = "GST_REGISTRATION_001"
     name = "GST registration validity"
+    required_providers = (Capability.GST,)
 
     def evaluate(
         self,

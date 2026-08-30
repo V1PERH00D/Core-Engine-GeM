@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Mapping
 
-from compliance_engine.models import ComplianceResult, Evidence, Requirement
+from compliance_engine.models import Capability, ComplianceResult, Evidence, Requirement
 
 
 class Rule(ABC):
@@ -13,6 +13,7 @@ class Rule(ABC):
 
     rule_id: str = ""
     name: str = ""
+    required_providers: tuple[Capability, ...] = ()
 
     @abstractmethod
     def evaluate(

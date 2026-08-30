@@ -61,6 +61,7 @@ class UdyamRegistrationRule(Rule):
 
     rule_id = "UDYAM_REGISTRATION_001"
     name = "Udyam registration validity"
+    required_providers = (Capability.UDYAM,)
 
     def evaluate(
         self,

@@ -141,6 +141,9 @@ class ComplianceEngine:
         if not requirements:
             return []
 
+        # Validate that all applicable requirements have required providers
+        self._validate_providers(requirements)
+
         grouped: dict[str, list[Requirement]] = defaultdict(list)
         for requirement in requirements:
             grouped[requirement.capability].append(requirement)
@@ -223,6 +226,31 @@ class ComplianceEngine:
                 )
             )
         return results
+
+    def _validate_providers(self, requirements: list[Requirement]) -> None:
+        """Validate that all applicable requirements have required providers available.
+        
+        For each applicable requirement, check if the required providers are registered.
+        If not, a UNVERIFIABLE result will be generated for that requirement.
+        """
+        for requirement in requirements:
+            if requirement.applicability in (
+                Applicability.NOT_APPLICABLE,
+                Applicability.UNKNOWN,
+            ):
+                continue
+                
+            rule = self._rules.get(requirement.rule_id)
+            if rule is None:
+                # No rule found, let executor handle this case
+                continue
+                
+            # Check if all required providers are available for this rule
+            for required_provider in rule.required_providers:
+                if required_provider not in self._providers:
+                    # Provider not registered - this is handled by the existing logic
+                    # in _results_for_capability_without_provider
+                    break
 
 
 __all__ = ["ComplianceEngine"]

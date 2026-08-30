@@ -54,6 +54,7 @@ class PANValidationRule(Rule):
 
     rule_id = "PAN_VALIDATION_001"
     name = "PAN validity"
+    required_providers = (Capability.PAN_INCOME_TAX,)
 
     def evaluate(
         self,
