@@ -25,7 +25,7 @@ _FLAG_ID_RE = re.compile(r"(?:^ *- |^\| )`([A-Z][A-Z0-9_]+)`(?:\s|$|\|)", re.MUL
 
 
 def _matrix_flag_ids() -> set[str]:
-    return set(_FLAG_ID_RE.findall(MATRIX_PATH.read_text()))
+    return set(_FLAG_ID_RE.findall(MATRIX_PATH.read_text(encoding="utf-8")))
 
 
 def test_every_matrix_flag_has_a_registry_entry() -> None:

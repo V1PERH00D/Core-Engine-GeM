@@ -5,7 +5,15 @@ from __future__ import annotations
 from typing import Any
 
 from compliance_engine.flags import get_flag_definition
-from compliance_engine.models import ComplianceResult, ComplianceStatus, Evidence, Requirement, Verification, VerificationStatus
+from compliance_engine.models import (
+    Capability,
+    ComplianceResult,
+    ComplianceStatus,
+    Evidence,
+    Requirement,
+    Verification,
+    VerificationStatus,
+)
 from compliance_engine.rules.base import Rule
 from compliance_engine.verification.base import VerificationProvider
 

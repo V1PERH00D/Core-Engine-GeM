@@ -4,6 +4,7 @@ from typing import Any
 
 from compliance_engine.flags import GSTIN_MISSING
 from compliance_engine.models import (
+    Capability,
     ComplianceResult,
     ComplianceStatus,
     Evidence,

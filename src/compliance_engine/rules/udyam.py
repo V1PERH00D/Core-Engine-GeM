@@ -6,6 +6,7 @@ from typing import Any
 
 from compliance_engine.flags import get_flag_definition
 from compliance_engine.models import (
+    Capability,
     ComplianceResult,
     ComplianceStatus,
     Evidence,
