@@ -447,6 +447,20 @@ _FLAGS: tuple[FlagDefinition, ...] = (
         "Cross-bidder verification incomplete",
     ),
     _flag(
+        "CROSS_BIDDER_DOCUMENT_NEAR_DUPLICATE",
+        FlagSeverity.MEDIUM,
+        "Cross-Bidder / Duplicate / Near-Duplicate Detection",
+        "Cross-bidder document near-duplicate",
+        "Near-identical document content detected across different bidders.",
+    ),
+    _flag(
+        "CROSS_BIDDER_DOCUMENT_REUSED",
+        FlagSeverity.HIGH,
+        "Cross-Bidder / Duplicate / Near-Duplicate Detection",
+        "Cross-bidder document reused",
+        "Identical document content or artifact detected across different bidders.",
+    ),
+    _flag(
         "CROSS_DOCUMENT_ADDRESS_CONFLICT",
         FlagSeverity.HIGH,
         "Cross-Document Verification",

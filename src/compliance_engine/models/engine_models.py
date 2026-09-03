@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 
 from compliance_engine.models.finding import IdentityFinding
 from compliance_engine.models.result import ComplianceResult
+from compliance_engine.models.verification import Verification
 
 
 class EngineResult(BaseModel):
@@ -36,7 +37,8 @@ class EngineResult(BaseModel):
     evaluated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     compliance_results: list[ComplianceResult] = Field(default_factory=list)
     identity_findings: list[IdentityFinding] = Field(default_factory=list)
-
-
-__all__ = ["EngineResult"]
+    verification_records: list[Verification] = Field(
+        default_factory=list,
+        description="Every Verification object produced by providers during this engine run.",
+    )
 
