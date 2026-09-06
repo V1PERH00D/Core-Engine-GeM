@@ -1,10 +1,12 @@
 """Authoritative verification records from government or other sources."""
 
+from __future__ import annotations
+
 from datetime import datetime, timezone
 from enum import StrEnum
-from typing import Any, Optional
+from typing import Any, ClassVar, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class VerificationStatus(StrEnum):
@@ -19,10 +21,23 @@ class VerificationStatus(StrEnum):
 
 
 class Verification(BaseModel):
-    """Payload returned by a government or other source adapter."""
+    """Payload returned by a government or other source adapter.
+
+    The model is **frozen**: every adapter, rule, and engine call must
+    treat a ``Verification`` as an immutable audit artefact. New
+    variants of a record (e.g. evidence/document linkage enrichment
+    from a rule) are produced via :meth:`model_copy`.
+    """
+
+    model_config = ConfigDict(frozen=True)
 
     verification_id: str = Field(
-        ..., description="Stable reference ID for this verification record."
+        ...,
+        description=(
+            "Unique reference ID for this verification event. Two "
+            "verification calls for the same source + identifier must "
+            "produce distinct IDs."
+        ),
     )
     bidder_id: str = Field(
         ..., description="Identifier of the bidder this verification applies to."
@@ -37,7 +52,12 @@ class Verification(BaseModel):
         None, description="The identifier that was queried against the source."
     )
     status: VerificationStatus = Field(
-        ..., description="Outcome of the source query (VERIFIED, NOT_FOUND, etc.)."
+        ...,
+        description=(
+            "DOMAIN outcome of the source query (VERIFIED, NOT_FOUND, "
+            "etc.). Determined from the source payload, never from the "
+            "raw transport status code alone."
+        ),
     )
     data: dict[str, Any] = Field(
         default_factory=dict,
@@ -74,3 +94,35 @@ class Verification(BaseModel):
         None,
         description="End-to-end trace ID correlating this query with other system events.",
     )
+    transport_status_code: int | None = Field(
+        None,
+        description=(
+            "Advisory transport-layer status code. Stored for audit only. "
+            "MUST NOT be used as the sole determinant of `status`."
+        ),
+    )
+
+    # ------------------------------------------------------------------
+    # Canonical id generator
+    # ------------------------------------------------------------------
+
+    #: Separator used inside canonical verification IDs.
+    ID_SEPARATOR: ClassVar[str] = ":"
+
+    @classmethod
+    def allocate_id(
+        cls, source: str, identifier: str, call_id: str
+    ) -> str:
+        """Return a unique verification ID for one verification event.
+
+        The format is ``"{source}:{identifier}:{call_id}"``. Every
+        adapter calls this exactly once per :meth:`verify` call so two
+        consecutive calls for the same ``(source, identifier)`` produce
+        distinct IDs (the ``call_id`` differs).
+        """
+        if not source or not identifier or not call_id:
+            raise ValueError(
+                "Verification.allocate_id requires non-empty "
+                "source, identifier, and call_id."
+            )
+        return f"{source}{cls.ID_SEPARATOR}{identifier}{cls.ID_SEPARATOR}{call_id}"

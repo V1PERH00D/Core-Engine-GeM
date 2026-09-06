@@ -96,6 +96,30 @@ class GSTRegistrationRule(Rule):
             )
 
         verification = provider.verify(gstin.bidder_id, str(gstin.value))
+        # The rule has unambiguous knowledge of which Evidence / Document
+        # triggered the provider query. Propagate that onto the returned
+        # Verification so the audit trail in ``EngineResult`` and any
+        # downstream AI Verification consumers can correlate the
+        # verification with the originating evidence without re-deriving
+        # it. The other audit fields (``query``, ``raw_response``,
+        # ``latency_ms``, ``correlation_id``) are owned by the provider
+        # and stay ``None`` if the provider did not supply them.
+        #
+        # ``Verification`` is a frozen pydantic model, so enrichment is
+        # done via ``model_copy`` rather than in-place mutation. The
+        # rule then returns the enriched copy to the engine; the
+        # engine's tracking wrapper picks the enriched copy up via a
+        # small ``register(verification)`` helper so the audit trail
+        # in ``EngineResult.verification_records`` is consistent.
+        verification = verification.model_copy(
+            update={
+                "evidence_id": gstin.evidence_id,
+                "document_id": gstin.document_id,
+            }
+        )
+        register = getattr(provider, "register", None)
+        if callable(register):
+            register(verification)
         status = _PROVIDER_TO_COMPLIANCE[verification.status]
         return ComplianceResult(
             requirement_id=requirement.requirement_id,

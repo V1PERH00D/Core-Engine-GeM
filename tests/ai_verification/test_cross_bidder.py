@@ -200,9 +200,9 @@ def test_near_duplicate_document_produces_near_duplicate_finding() -> None:
             "ocr_confidence": 0.93,
             "document_type_confidence": 0.9,
             "issuer": "Test Issuer",
-            "authorization_number": "AUTH124",
-            "issue_date": date(2024, 1, 2),
-            "valid_until": date(2025, 1, 2),
+            "authorization_number": "AUTH123",
+            "issue_date": date(2024, 1, 1),
+            "valid_until": date(2025, 1, 1),
             "bidder_name": "Bidder B",
             "territory": "Territory X",
         }
@@ -714,3 +714,484 @@ def test_missing_artifact_data_fails_safely() -> None:
     result: VerificationResult = engine.run(input_data)
     # We don't make any assertions about the findings because the missing data may lead to no findings.
     # The important thing is that it doesn't crash.
+
+
+# ===========================================================================
+# Explicit propagation tests (TASK 6 #7, #8, #9)
+# ===========================================================================
+
+
+def test_explicit_bidder_id_propagation_on_finding_and_trace() -> None:
+    """The primary bidder and related bidder IDs must be propagated
+    explicitly onto both the finding and the similarity trace.
+
+    The contract requires:
+
+    - ``finding.bidder_id`` is the *primary* bidder (left side).
+    - ``finding.related_bidder_ids`` lists the other bidder (right side).
+    - ``finding.trace.left_bidder_id`` / ``right_bidder_id`` reflect the
+      pair orientation used to detect the anomaly.
+    """
+    raw_text = "Explicit bidder id propagation test."
+    file_hash = "sha256:" + "p" * 62
+    metadata = {
+        "doc1": {
+            "document_type": "PDF",
+            "evidence_id": "ev-primary",
+            "ocr_confidence": 0.95,
+            "document_type_confidence": 0.9,
+            "issuer": "Test Issuer",
+            "authorization_number": "AUTH-PROP",
+            "issue_date": date(2024, 1, 1),
+            "valid_until": date(2025, 1, 1),
+            "bidder_name": "Bidder A",
+            "territory": "Territory X",
+        },
+        "doc2": {
+            "document_type": "PDF",
+            "evidence_id": "ev-other",
+            "ocr_confidence": 0.95,
+            "document_type_confidence": 0.9,
+            "issuer": "Test Issuer",
+            "authorization_number": "AUTH-PROP",
+            "issue_date": date(2024, 1, 1),
+            "valid_until": date(2025, 1, 1),
+            "bidder_name": "Bidder B",
+            "territory": "Territory X",
+        },
+    }
+    artifact_store = InMemoryDocumentArtifactStore(
+        raw_texts={"doc1": raw_text, "doc2": raw_text},
+        file_hashes={"doc1": file_hash, "doc2": file_hash},
+        metadata={k: _make_meta(v) for k, v in metadata.items()},
+    )
+    engine = VerificationEngine(artifact_store=artifact_store)
+
+    ev1 = make_evidence(
+        evidence_id="ev-primary",
+        bidder_id="bidder-primary",
+        document_id="doc1",
+        document_type="PDF",
+    )
+    ev2 = make_evidence(
+        evidence_id="ev-other",
+        bidder_id="bidder-other",
+        document_id="doc2",
+        document_type="PDF",
+    )
+
+    input_data = VerificationInput(
+        bidder_id="bidder-primary",
+        evidence=[ev1],
+        compliance_results=[],
+        identity_findings=[],
+        bidder_corpus=[
+            BidderSummary(
+                bidder_id="bidder-other",
+                evidence=[ev2],
+                compliance_results=[],
+                identity_findings=[],
+                verification_records=[],
+            )
+        ],
+    )
+
+    result: VerificationResult = engine.run(input_data)
+
+    assert len(result.findings) == 1
+    finding = result.findings[0]
+
+    # Finding scoped to the primary bidder.
+    assert finding.bidder_id == "bidder-primary"
+    # Other bidder is preserved on the finding.
+    assert finding.related_bidder_ids == ["bidder-other"]
+
+    # The trace must carry the explicit left/right bidder IDs.
+    assert finding.trace is not None
+    assert finding.trace.left_bidder_id == "bidder-primary"
+    assert finding.trace.right_bidder_id == "bidder-other"
+    # The trace must also carry the explicit document IDs that were compared.
+    assert finding.trace.left_document_id == "doc1"
+    assert finding.trace.right_document_id == "doc2"
+
+
+def test_evidence_refs_propagation_deterministic() -> None:
+    """Evidence refs on the finding must be drawn from the actual
+    ``Evidence`` items (and ``DocumentMeta.evidence_id``) that the
+    detector looked at, and they must be preserved verbatim.
+
+    Two-bidder exact-reuse case, with a single evidence per document,
+    so we can assert exact equality on the resulting ``evidence_refs``.
+    """
+    raw_text = "Evidence ref propagation test."
+    file_hash = "sha256:" + "q" * 62
+    metadata = {
+        "doc1": {
+            "document_type": "PDF",
+            "evidence_id": "ev-primary",
+            "ocr_confidence": 0.95,
+            "document_type_confidence": 0.9,
+            "issuer": "Test Issuer",
+            "authorization_number": "AUTH-EVR",
+            "issue_date": date(2024, 2, 1),
+            "valid_until": date(2025, 2, 1),
+            "bidder_name": "Bidder A",
+            "territory": "Territory X",
+        },
+        "doc2": {
+            "document_type": "PDF",
+            "evidence_id": "ev-other",
+            "ocr_confidence": 0.95,
+            "document_type_confidence": 0.9,
+            "issuer": "Test Issuer",
+            "authorization_number": "AUTH-EVR",
+            "issue_date": date(2024, 2, 1),
+            "valid_until": date(2025, 2, 1),
+            "bidder_name": "Bidder B",
+            "territory": "Territory X",
+        },
+    }
+    artifact_store = InMemoryDocumentArtifactStore(
+        raw_texts={"doc1": raw_text, "doc2": raw_text},
+        file_hashes={"doc1": file_hash, "doc2": file_hash},
+        metadata={k: _make_meta(v) for k, v in metadata.items()},
+    )
+    engine = VerificationEngine(artifact_store=artifact_store)
+
+    ev1 = make_evidence(
+        evidence_id="ev-primary",
+        bidder_id="bidder-1",
+        document_id="doc1",
+        document_type="PDF",
+    )
+    ev2 = make_evidence(
+        evidence_id="ev-other",
+        bidder_id="bidder-2",
+        document_id="doc2",
+        document_type="PDF",
+    )
+
+    input_data = VerificationInput(
+        bidder_id="bidder-1",
+        evidence=[ev1],
+        compliance_results=[],
+        identity_findings=[],
+        bidder_corpus=[
+            BidderSummary(
+                bidder_id="bidder-2",
+                evidence=[ev2],
+                compliance_results=[],
+                identity_findings=[],
+                verification_records=[],
+            )
+        ],
+    )
+
+    result: VerificationResult = engine.run(input_data)
+
+    assert len(result.findings) == 1
+    finding = result.findings[0]
+    # The detector pulls evidence_refs from the DocumentMeta.evidence_id
+    # fields of the two documents, in left-then-right order.
+    assert finding.evidence_refs == ["ev-primary", "ev-other"]
+
+
+def test_verification_refs_populated_when_evidence_ids_match() -> None:
+    """When a ``Verification`` record carries an ``evidence_id`` that
+    matches the finding's ``evidence_refs``, the orchestrator must
+    attach the verification_id to the finding.
+
+    We provide:
+
+    - one Verification on the primary bidder side that links to
+      ``ev-primary``
+    - one Verification on the corpus bidder side that links to
+      ``ev-other``
+
+    Both should be attached to the resulting finding.
+    """
+    raw_text = "Verification ref matching test."
+    file_hash = "sha256:" + "r" * 62
+    metadata = {
+        "doc1": {
+            "document_type": "PDF",
+            "evidence_id": "ev-primary",
+            "ocr_confidence": 0.95,
+            "document_type_confidence": 0.9,
+            "issuer": "Test Issuer",
+            "authorization_number": "AUTH-VRF",
+            "issue_date": date(2024, 3, 1),
+            "valid_until": date(2025, 3, 1),
+            "bidder_name": "Bidder A",
+            "territory": "Territory X",
+        },
+        "doc2": {
+            "document_type": "PDF",
+            "evidence_id": "ev-other",
+            "ocr_confidence": 0.95,
+            "document_type_confidence": 0.9,
+            "issuer": "Test Issuer",
+            "authorization_number": "AUTH-VRF",
+            "issue_date": date(2024, 3, 1),
+            "valid_until": date(2025, 3, 1),
+            "bidder_name": "Bidder B",
+            "territory": "Territory X",
+        },
+    }
+    artifact_store = InMemoryDocumentArtifactStore(
+        raw_texts={"doc1": raw_text, "doc2": raw_text},
+        file_hashes={"doc1": file_hash, "doc2": file_hash},
+        metadata={k: _make_meta(v) for k, v in metadata.items()},
+    )
+    engine = VerificationEngine(artifact_store=artifact_store)
+
+    ev1 = make_evidence(
+        evidence_id="ev-primary",
+        bidder_id="bidder-1",
+        document_id="doc1",
+        document_type="PDF",
+    )
+    ev2 = make_evidence(
+        evidence_id="ev-other",
+        bidder_id="bidder-2",
+        document_id="doc2",
+        document_type="PDF",
+    )
+
+    ver_primary = make_verification_record(
+        verification_id="ver-primary",
+        bidder_id="bidder-1",
+    )
+    # Verification is a frozen model; attach evidence_id via model_copy.
+    ver_primary = ver_primary.model_copy(update={"evidence_id": "ev-primary"})
+
+    ver_other = make_verification_record(
+        verification_id="ver-other",
+        bidder_id="bidder-2",
+    )
+    ver_other = ver_other.model_copy(update={"evidence_id": "ev-other"})
+
+    input_data = VerificationInput(
+        bidder_id="bidder-1",
+        evidence=[ev1],
+        compliance_results=[],
+        identity_findings=[],
+        verification_records=[ver_primary],
+        bidder_corpus=[
+            BidderSummary(
+                bidder_id="bidder-2",
+                evidence=[ev2],
+                compliance_results=[],
+                identity_findings=[],
+                verification_records=[ver_other],
+            )
+        ],
+    )
+
+    result: VerificationResult = engine.run(input_data)
+
+    assert len(result.findings) == 1
+    finding = result.findings[0]
+    # Both Verification records should be attached to the finding in
+    # first-encountered order (left first, then right).
+    assert set(finding.verification_refs) == {"ver-primary", "ver-other"}
+    assert len(finding.verification_refs) == 2
+
+
+def test_verification_refs_remain_empty_when_evidence_id_does_not_match() -> None:
+    """If a Verification record's ``evidence_id`` does not match any
+    evidence_ref on the finding, the finding's ``verification_refs``
+    must stay empty.
+    """
+    raw_text = "Verification ref mismatch test."
+    file_hash = "sha256:" + "s" * 62
+    metadata = {
+        "doc1": {
+            "document_type": "PDF",
+            "evidence_id": "ev-primary",
+            "ocr_confidence": 0.95,
+            "document_type_confidence": 0.9,
+            "issuer": "Test Issuer",
+            "authorization_number": "AUTH-NONE",
+            "issue_date": date(2024, 4, 1),
+            "valid_until": date(2025, 4, 1),
+            "bidder_name": "Bidder A",
+            "territory": "Territory X",
+        },
+        "doc2": {
+            "document_type": "PDF",
+            "evidence_id": "ev-other",
+            "ocr_confidence": 0.95,
+            "document_type_confidence": 0.9,
+            "issuer": "Test Issuer",
+            "authorization_number": "AUTH-NONE",
+            "issue_date": date(2024, 4, 1),
+            "valid_until": date(2025, 4, 1),
+            "bidder_name": "Bidder B",
+            "territory": "Territory X",
+        },
+    }
+    artifact_store = InMemoryDocumentArtifactStore(
+        raw_texts={"doc1": raw_text, "doc2": raw_text},
+        file_hashes={"doc1": file_hash, "doc2": file_hash},
+        metadata={k: _make_meta(v) for k, v in metadata.items()},
+    )
+    engine = VerificationEngine(artifact_store=artifact_store)
+
+    ev1 = make_evidence(
+        evidence_id="ev-primary",
+        bidder_id="bidder-1",
+        document_id="doc1",
+        document_type="PDF",
+    )
+    ev2 = make_evidence(
+        evidence_id="ev-other",
+        bidder_id="bidder-2",
+        document_id="doc2",
+        document_type="PDF",
+    )
+
+    # Verification records exist, but their evidence_id does not match
+    # any evidence_ref that the detector will emit.
+    ver_unrelated_1 = make_verification_record(
+        verification_id="ver-unrelated-1",
+        bidder_id="bidder-1",
+    )
+    ver_unrelated_1 = ver_unrelated_1.model_copy(
+        update={"evidence_id": "ev-not-in-finding"}
+    )
+
+    ver_unrelated_2 = make_verification_record(
+        verification_id="ver-unrelated-2",
+        bidder_id="bidder-2",
+    )
+    ver_unrelated_2 = ver_unrelated_2.model_copy(
+        update={"evidence_id": "ev-also-not-in-finding"}
+    )
+
+    input_data = VerificationInput(
+        bidder_id="bidder-1",
+        evidence=[ev1],
+        compliance_results=[],
+        identity_findings=[],
+        verification_records=[ver_unrelated_1],
+        bidder_corpus=[
+            BidderSummary(
+                bidder_id="bidder-2",
+                evidence=[ev2],
+                compliance_results=[],
+                identity_findings=[],
+                verification_records=[ver_unrelated_2],
+            )
+        ],
+    )
+
+    result: VerificationResult = engine.run(input_data)
+
+    assert len(result.findings) == 1
+    finding = result.findings[0]
+    assert finding.verification_refs == []
+
+
+def test_primary_bidder_in_own_corpus_is_ignored() -> None:
+    """If the primary bidder's ID accidentally also appears inside
+    ``bidder_corpus``, the orchestrator must skip those pairs to avoid
+    self-comparison.
+    """
+    raw_text = "Self-comparison guard test."
+    file_hash = "sha256:" + "t" * 62
+    metadata = {
+        "doc1": {
+            "document_type": "PDF",
+            "evidence_id": "ev-primary",
+            "ocr_confidence": 0.95,
+            "document_type_confidence": 0.9,
+            "issuer": "Test Issuer",
+            "authorization_number": "AUTH-SELF",
+            "issue_date": date(2024, 5, 1),
+            "valid_until": date(2025, 5, 1),
+            "bidder_name": "Bidder A",
+            "territory": "Territory X",
+        }
+    }
+    artifact_store = InMemoryDocumentArtifactStore(
+        raw_texts={"doc1": raw_text},
+        file_hashes={"doc1": file_hash},
+        metadata={k: _make_meta(v) for k, v in metadata.items()},
+    )
+    engine = VerificationEngine(artifact_store=artifact_store)
+
+    ev_primary = make_evidence(
+        evidence_id="ev-primary",
+        bidder_id="bidder-1",
+        document_id="doc1",
+        document_type="PDF",
+    )
+    # Same bidder, same document - but listed in the corpus.
+    ev_self = make_evidence(
+        evidence_id="ev-self",
+        bidder_id="bidder-1",
+        document_id="doc1",
+        document_type="PDF",
+    )
+
+    input_data = VerificationInput(
+        bidder_id="bidder-1",
+        evidence=[ev_primary],
+        compliance_results=[],
+        identity_findings=[],
+        bidder_corpus=[
+            BidderSummary(
+                bidder_id="bidder-1",  # <-- primary bidder in its own corpus
+                evidence=[ev_self],
+                compliance_results=[],
+                identity_findings=[],
+                verification_records=[],
+            )
+        ],
+    )
+
+    result: VerificationResult = engine.run(input_data)
+    # No self-comparison should produce a finding.
+    assert result.findings == []
+
+
+def test_empty_artifact_store_returns_empty_findings() -> None:
+    """If the artifact store has no data at all, the engine must
+    return an empty findings list without raising.
+    """
+    artifact_store = InMemoryDocumentArtifactStore()
+    engine = VerificationEngine(artifact_store=artifact_store)
+
+    ev1 = make_evidence(
+        evidence_id="ev1",
+        bidder_id="bidder-1",
+        document_id="doc1",
+        document_type="PDF",
+    )
+    ev2 = make_evidence(
+        evidence_id="ev2",
+        bidder_id="bidder-2",
+        document_id="doc2",
+        document_type="PDF",
+    )
+
+    input_data = VerificationInput(
+        bidder_id="bidder-1",
+        evidence=[ev1],
+        compliance_results=[],
+        identity_findings=[],
+        bidder_corpus=[
+            BidderSummary(
+                bidder_id="bidder-2",
+                evidence=[ev2],
+                compliance_results=[],
+                identity_findings=[],
+                verification_records=[],
+            )
+        ],
+    )
+
+    result: VerificationResult = engine.run(input_data)
+    assert result.findings == []
+

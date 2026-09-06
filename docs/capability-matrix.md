@@ -169,6 +169,7 @@ Depending on the bidder and requirement:
 - `ENTITY_TYPE_MISMATCH`
 - `ADDRESS_MISMATCH`
 - `CROSS_DOCUMENT_IDENTITY_MISMATCH`
+- `CROSS_SOURCE_IDENTITY_MISMATCH`
 - `IDENTIFIER_ENTITY_MISMATCH`
 
 ---
@@ -996,6 +997,8 @@ Blacklisting, debarment, suspension, and integrity compliance checks.
 - `DEBARMENT_CLEARANCE_INVALID`
 - `INTEGRITY_UNDERTAKING_MISSING`
 - `DEBARMENT_VERIFICATION_UNAVAILABLE`
+- `PROCUREMENT_DEBARMENT_ACTIVE`
+- `PROCUREMENT_ELIGIBILITY_UNVERIFIABLE`
 
 ---
 
@@ -1126,6 +1129,8 @@ Consistency and integrity verification across all submitted documents for a bidd
 - `CROSS_DOCUMENT_ENTITY_TYPE_CONFLICT`
 - `CROSS_DOCUMENT_IDENTIFIER_CONFLICT`
 - `CROSS_DOCUMENT_DATE_SEQUENCE_INVALID`
+- `CROSS_DOCUMENT_PRODUCT_MISMATCH`
+- `CROSS_DOCUMENT_MANUFACTURER_MISMATCH`
 - `CROSS_DOCUMENT_TEMPORAL_GAP`
 - `CROSS_DOCUMENT_FINANCIAL_YEAR_MISMATCH`
 - `CROSS_DOCUMENT_VERIFICATION_INCOMPLETE`
@@ -1704,6 +1709,8 @@ All verification flags defined across all 29 capabilities:
 | `DEBARMENT_CLEARANCE_INVALID` | HIGH | Debarment clearance invalid |
 | `INTEGRITY_UNDERTAKING_MISSING` | HIGH | Integrity undertaking missing |
 | `DEBARMENT_VERIFICATION_UNAVAILABLE` | MEDIUM | Debarment verification unavailable |
+| `PROCUREMENT_DEBARMENT_ACTIVE` | HIGH | Active procurement debarment / restriction |
+| `PROCUREMENT_ELIGIBILITY_UNVERIFIABLE` | MEDIUM | Procurement eligibility unverifiable |
 
 ## Other Applicable Statutory Requirements
 
@@ -1736,6 +1743,8 @@ All verification flags defined across all 29 capabilities:
 | `CROSS_DOCUMENT_ENTITY_TYPE_CONFLICT` | HIGH | Cross-document entity type conflict |
 | `CROSS_DOCUMENT_IDENTIFIER_CONFLICT` | CRITICAL | Cross-document identifier conflict |
 | `CROSS_DOCUMENT_DATE_SEQUENCE_INVALID` | HIGH | Cross-document date sequence invalid |
+| `CROSS_DOCUMENT_PRODUCT_MISMATCH` | MEDIUM | Cross-document product mismatch |
+| `CROSS_DOCUMENT_MANUFACTURER_MISMATCH` | MEDIUM | Cross-document manufacturer mismatch |
 | `CROSS_DOCUMENT_TEMPORAL_GAP` | MEDIUM | Cross-document temporal gap |
 | `CROSS_DOCUMENT_FINANCIAL_YEAR_MISMATCH` | MEDIUM | Cross-document financial year mismatch |
 | `CROSS_DOCUMENT_VERIFICATION_INCOMPLETE` | LOW | Cross-document verification incomplete |
@@ -2013,10 +2022,10 @@ AuditTrail {
 28. AI Recommendation
 29. Auditability / Evidence Traceability
 
-## Total Verification Flags: 208
+## Total Verification Flags: 210
 
 Flag count by capability:
-- Bidder Identity: 5
+- Bidder Identity: 6
 - GST / GSTN: 8
 - PAN / Income Tax: 10
 - Udyam / MSME: 6
@@ -2031,10 +2040,10 @@ Flag count by capability:
 - BIS / Product Certification: 8
 - DigiLocker / Document Verification: 9
 - OEM Authorization: 8
-- Blacklisting / Debarment: 9
+- Blacklisting / Debarment: 11
 - Other Applicable Statutory Requirements: 7
 - Other Tender-Specific Requirements: 5
-- Cross-Document Verification: 8
+- Cross-Document Verification: 10
 - Cross-Bidder / Duplicate Detection: 7
 - Missing / Completeness Checks: 8
 - Registration / Status Checks: 7

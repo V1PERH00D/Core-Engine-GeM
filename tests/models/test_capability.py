@@ -65,6 +65,7 @@ def test_canonical_ids_documented_for_current_capabilities() -> None:
     """The current engine uses exactly the documented canonical IDs."""
     expected = {
         "GST",
+        "GST_RETURN_FILING",
         "PAN_INCOME_TAX",
         "UDYAM",
         "FINANCIAL",

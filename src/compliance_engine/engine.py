@@ -57,6 +57,23 @@ class _TrackingProvider:
         self._records.append(verification)
         return verification
 
+    def register(self, verification):
+        """Replace the last captured Verification with ``verification``.
+
+        A rule can mutate a returned ``Verification`` only by
+        producing a new object (the model is frozen). The engine's
+        tracking list would otherwise retain the pre-enrichment
+        object. This helper lets a rule swap the captured record
+        with the enriched copy so the audit trail in
+        ``EngineResult.verification_records`` is consistent with
+        the ``ComplianceResult.verification_refs`` the rule emits.
+
+        ``register`` is a no-op when nothing has been captured yet.
+        """
+        if not self._records:
+            return
+        self._records[-1] = verification
+
     def __getattr__(self, name):
         # Defer to the wrapped provider for any other attributes/methods
         return getattr(self._provider, name)

@@ -15,13 +15,15 @@ Mapping of canonical machine ID to its human-readable section name (for
 documentation only; the engine never reads these names):
 
     GST                  -> "GST / GSTN"                      (matrix \u00a74)
+    GST_RETURN_FILING    -> "GST / GSTN" (return filing)      (matrix \u00a74)
     PAN_INCOME_TAX       -> "PAN / Income Tax"                (matrix \u00a75)
     UDYAM                -> "Udyam / MSME"                    (matrix \u00a76)
     FINANCIAL            -> "Financial Capacity"              (matrix \u00a77)
     BIDDER_IDENTITY      -> "Bidder Identity"                 (matrix \u00a73, anomalies)
 
-The IDs ``GST``, ``PAN_INCOME_TAX``, ``UDYAM``, ``FINANCIAL``, and
-``BIDDER_IDENTITY`` are the only ones currently in use by the engine.
+The IDs ``GST``, ``GST_RETURN_FILING``, ``PAN_INCOME_TAX``, ``UDYAM``,
+``FINANCIAL``, and ``BIDDER_IDENTITY`` are the only ones currently in
+use by the engine.
 Any other identifier seen in code is either a human-readable label on a
 ``FlagDefinition`` (out of scope here) or a value to be migrated to a
 canonical ID by a future change.
@@ -40,6 +42,7 @@ class Capability(StrEnum):
     """
 
     GST = "GST"
+    GST_RETURN_FILING = "GST_RETURN_FILING"
     PAN_INCOME_TAX = "PAN_INCOME_TAX"
     UDYAM = "UDYAM"
     FINANCIAL = "FINANCIAL"

@@ -426,6 +426,18 @@ _FLAGS: tuple[FlagDefinition, ...] = (
         "Covered employee count below threshold",
     ),
     _flag(
+        "CROSS_SOURCE_IDENTITY_MISMATCH",
+        FlagSeverity.HIGH,
+        "Bidder Identity",
+        "Cross-source identity mismatch",
+        (
+            "Verified identity-bearing names from two or more authoritative "
+            "sources (e.g. GST, PAN, Udyam, MCA) materially differ after "
+            "deterministic normalization. Indicates a bidder identity "
+            "consistency concern; downstream policy decides compliance."
+        ),
+    ),
+    _flag(
         "CRITICAL_CAPABILITY_FAILED",
         FlagSeverity.CRITICAL,
         "Overall Bid-Level Assessment",
@@ -508,6 +520,20 @@ _FLAGS: tuple[FlagDefinition, ...] = (
         "Cross-Document Verification",
         "Cross-document name conflict",
         "Cross-document name conflict",
+    ),
+    _flag(
+        "CROSS_DOCUMENT_PRODUCT_MISMATCH",
+        FlagSeverity.MEDIUM,
+        "Cross-Document Verification",
+        "Cross-document product mismatch",
+        "Cross-document product mismatch",
+    ),
+    _flag(
+        "CROSS_DOCUMENT_MANUFACTURER_MISMATCH",
+        FlagSeverity.MEDIUM,
+        "Cross-Document Verification",
+        "Cross-document manufacturer mismatch",
+        "Cross-document manufacturer mismatch",
     ),
     _flag(
         "CROSS_DOCUMENT_TEMPORAL_GAP",
@@ -1159,6 +1185,20 @@ _FLAGS: tuple[FlagDefinition, ...] = (
         "PAN / Income Tax",
         "PAN verification unavailable",
         "PAN verification unavailable",
+    ),
+    _flag(
+        "PROCUREMENT_DEBARMENT_ACTIVE",
+        FlagSeverity.HIGH,
+        "Blacklisting / Debarment",
+        "Active procurement debarment / restriction",
+        "Active procurement debarment / restriction",
+    ),
+    _flag(
+        "PROCUREMENT_ELIGIBILITY_UNVERIFIABLE",
+        FlagSeverity.MEDIUM,
+        "Blacklisting / Debarment",
+        "Procurement eligibility unverifiable",
+        "Procurement eligibility unverifiable",
     ),
     _flag(
         "RECOMMENDATION_AUTOMATIC_ACCEPT",
