@@ -89,7 +89,7 @@ class FinancialCheck(StrEnum):
 class FinancialYear(BaseModel):
     """A canonical normalized financial year (``YYYY-YY``)."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     canonical: str
 
@@ -112,7 +112,7 @@ class FinancialYear(BaseModel):
 class TurnoverPoint(BaseModel):
     """One financial year of annual turnover."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     financial_year: FinancialYear
     turnover_inr_cr: NonNegative
@@ -124,7 +124,7 @@ class TurnoverPoint(BaseModel):
 class NetWorth(BaseModel):
     """Net worth for a single financial year (can be negative)."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     financial_year: FinancialYear
     value_inr_cr: float
@@ -136,7 +136,7 @@ class NetWorth(BaseModel):
 class Solvency(BaseModel):
     """Solvency indicator for a single financial year."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     financial_year: FinancialYear
     is_solvency_positive: bool
@@ -152,7 +152,7 @@ class BalanceSheet(BaseModel):
     ``None`` (unavailable) rather than being fabricated.
     """
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     financial_year: FinancialYear
     total_assets_inr_cr: NonNegative | None = None
@@ -172,7 +172,7 @@ class AuditInfo(BaseModel):
     CA/UDIN fields are preserved verbatim for a future authoritative
     verifier. Nothing here claims UDIN authenticity."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     financial_year: FinancialYear | None = None
     audited: bool | None = None
@@ -192,7 +192,7 @@ class AuditInfo(BaseModel):
 class FinancialProfile(BaseModel):
     """Aggregate typed financial picture for one bidder."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
     bidder_id: str
     annual_turnovers: tuple[TurnoverPoint, ...] = ()

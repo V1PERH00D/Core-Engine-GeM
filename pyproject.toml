@@ -11,6 +11,10 @@ requires-python = ">=3.11"
 dependencies = [
   "jsonschema>=4.23",
   "pydantic>=2.0",
+  # Persistence + processing infrastructure milestones:
+  # psycopg 3 is the PostgreSQL driver; redis 5+ is the queue/lease client.
+  "psycopg[binary]>=3.1",
+  "redis>=5.0",
 ]
 
 [project.optional-dependencies]
@@ -22,3 +26,6 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+  "integration: opt-in tests requiring live Redis/Postgres (skipped by default)",
+]

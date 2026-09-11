@@ -401,11 +401,18 @@ Multiple financial years must be preserved with individual financials.
 
 - `FINANCIAL_CAPACITY_MISSING`
 - `TURNOVER_BELOW_THRESHOLD`
+- `TURNOVER_PERIOD_MISMATCH`
+- `TURNOVER_DATA_MISSING`
+- `TURNOVER_TREND_ANOMALY`
 - `NET_WORTH_BELOW_THRESHOLD`
-- `FINANCIAL_YEAR_MISSING`
-- `FINANCIAL_DATA_INCONSISTENCY`
-- `AUDITED_STATUS_MISSING`
+- `SOLVENCY_REQUIREMENT_FAILED`
 - `SOLVENCY_THRESHOLD_NOT_MET`
+- `FINANCIAL_YEAR_MISSING`
+- `FINANCIAL_YEAR_MISMATCH`
+- `FINANCIAL_DATA_INCONSISTENCY`
+- `BALANCE_SHEET_INCOMPLETE`
+- `AUDIT_EVIDENCE_MISSING`
+- `AUDITED_STATUS_MISSING`
 - `FINANCIAL_VERIFICATION_UNAVAILABLE`
 
 ---
@@ -1563,11 +1570,18 @@ All verification flags defined across all 29 capabilities:
 |---------|----------|-------|
 | `FINANCIAL_CAPACITY_MISSING` | HIGH | Financial capacity evidence missing |
 | `TURNOVER_BELOW_THRESHOLD` | HIGH | Turnover below threshold |
+| `TURNOVER_PERIOD_MISMATCH` | MEDIUM | Turnover period mismatch |
+| `TURNOVER_DATA_MISSING` | MEDIUM | Turnover data missing |
+| `TURNOVER_TREND_ANOMALY` | MEDIUM | Turnover trend anomaly |
 | `NET_WORTH_BELOW_THRESHOLD` | HIGH | Net worth below threshold |
-| `FINANCIAL_YEAR_MISSING` | HIGH | Financial year missing |
-| `FINANCIAL_DATA_INCONSISTENCY` | HIGH | Financial data inconsistency |
-| `AUDITED_STATUS_MISSING` | MEDIUM | Audited status missing |
+| `SOLVENCY_REQUIREMENT_FAILED` | HIGH | Solvency requirement failed |
 | `SOLVENCY_THRESHOLD_NOT_MET` | HIGH | Solvency threshold not met |
+| `FINANCIAL_YEAR_MISSING` | HIGH | Financial year missing |
+| `FINANCIAL_YEAR_MISMATCH` | MEDIUM | Financial year mismatch |
+| `FINANCIAL_DATA_INCONSISTENCY` | HIGH | Financial data inconsistency |
+| `BALANCE_SHEET_INCOMPLETE` | MEDIUM | Balance sheet incomplete |
+| `AUDIT_EVIDENCE_MISSING` | MEDIUM | Audit evidence missing |
+| `AUDITED_STATUS_MISSING` | MEDIUM | Audited status missing |
 | `FINANCIAL_VERIFICATION_UNAVAILABLE` | MEDIUM | Financial verification unavailable |
 
 ## CA / UDIN

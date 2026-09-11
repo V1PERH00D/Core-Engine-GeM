@@ -197,7 +197,8 @@ class ComplianceEngine:
             if provider is None:
                 results.extend(
                     self._results_for_capability_without_provider(
-                        capability_requirements
+                        capability_requirements,
+                        evidence=evidence,
                     )
                 )
                 continue
@@ -219,6 +220,8 @@ class ComplianceEngine:
     def _results_for_capability_without_provider(
         self,
         requirements: list[Requirement],
+        *,
+        evidence: list[Evidence] | None = None,
     ) -> list[ComplianceResult]:
         """Produce results for a capability with no registered provider.
 
@@ -226,15 +229,21 @@ class ComplianceEngine:
         passed to the executor (with ``provider=None``); the executor
         short-circuits those before any rule call, so the result is
         identical to what it would have produced with a real provider.
-        Each ``APPLICABLE`` requirement in the group yields a single
-        ``UNVERIFIABLE`` result, explaining that the required provider
-        is not available.
+
+        For applicable requirements, a rule with no declared providers
+        is "provider-free" and is forwarded to the executor with
+        ``provider=None`` so its own evaluation logic runs. Every
+        applicable requirement whose registered rule requires any
+        provider is reported as a single ``UNVERIFIABLE`` result that
+        explains the missing provider, preserving the original
+        semantics for GST/PAN/Udyam/etc.
 
         This is the engine's only translation beyond pure delegation.
         It does not duplicate the executor's ``NOT_APPLICABLE``,
         ``UNKNOWN``, or ``NOT_CHECKED`` semantics.
         """
         non_applicable: list[Requirement] = []
+        provider_free: list[Requirement] = []
         applicable: list[Requirement] = []
         for requirement in requirements:
             if requirement.applicability in (
@@ -242,6 +251,10 @@ class ComplianceEngine:
                 Applicability.UNKNOWN,
             ):
                 non_applicable.append(requirement)
+                continue
+            rule = self._rules.get(requirement.rule_id)
+            if rule is not None and not getattr(rule, "required_providers", ()):
+                provider_free.append(requirement)
             else:
                 applicable.append(requirement)
 
@@ -251,6 +264,15 @@ class ComplianceEngine:
                 self._executor.execute(
                     non_applicable,
                     evidence=[],
+                    rules=self._rules,
+                    provider=None,
+                )
+            )
+        if provider_free:
+            results.extend(
+                self._executor.execute(
+                    provider_free,
+                    evidence=evidence or [],
                     rules=self._rules,
                     provider=None,
                 )

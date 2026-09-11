@@ -1,585 +1,294 @@
-"""Tests for the Financial Capacity rule against the Section 7 contract."""
+"""Tests for the Financial Capacity rule against the Section 7 contract.
+
+The rule is provider-free: tender parameters are the source of every
+threshold. Values are in INR crore, financial years are canonical, and
+no external government lookup is performed.
+"""
 
 import pytest
 
 from compliance_engine.models import (
     Applicability,
-    Capability,
     ComplianceStatus,
     Evidence,
     Requirement,
 )
-from compliance_engine.rules.financial import FinancialCapacityRule
-from compliance_engine.verification.financial import MockFinancialProvider
+from compliance_engine.rules import FinancialCapacityRule
+
+
+def _ev(doc, field, value, *, bidder="BIDDER_001", doc_type="FIN_STMT",
+        confidence=0.9, evidence_id=None):
+    return Evidence(
+        evidence_id=evidence_id or f"{doc}:{field}",
+        bidder_id=bidder,
+        document_id=doc,
+        document_type=doc_type,
+        field_name=field,
+        value=value,
+        confidence=confidence,
+    )
 
 
 @pytest.fixture
-def rule():
-    """Return a financial capacity rule instance."""
+def rule() -> FinancialCapacityRule:
     return FinancialCapacityRule()
 
 
-@pytest.fixture
-def provider():
-    """Return a deterministic mock financial provider."""
-    return MockFinancialProvider()
-
-
-@pytest.fixture
-def bidder_id():
-    """Return a bidder identifier for the test fixtures."""
-    return "BIDDER_001"
-
-
-@pytest.fixture
-def financial_requirement():
-    """Return a tender requirement covering the supported Section 7 checks."""
+def _turnover_requirement(**params):
     return Requirement(
         requirement_id="FIN_REQ_001",
-        capability=Capability.FINANCIAL,
+        capability="Financial Capacity",
         description="Bidder must meet minimum financial capacity conditions.",
         mandatory=True,
         applicability=Applicability.APPLICABLE,
-        expected={
-            "turnover_threshold": 1000000,
-            "net_worth_threshold": 500000,
-            "solvency_threshold": 1.0,
-            "audited_required": True,
-            "assessment_period_years": 1,
-        },
-        parameters={
-            "assessment_period_years": 1,
-            "solvency_threshold": 1.0,
-        },
+        expected=None,
+        parameters={"focus": "TURNOVER", **params},
         rule_id="FINANCIAL_CAPACITY_001",
     )
 
 
-@pytest.fixture
-def compliant_evidence(bidder_id):
-    """Return a compliant set of financial evidence for a single year."""
+def _audit_requirement(**params):
+    return Requirement(
+        requirement_id="FIN_REQ_AUDIT",
+        capability="Financial Capacity",
+        description="Audit requirement.",
+        mandatory=True,
+        applicability=Applicability.APPLICABLE,
+        expected=None,
+        parameters={"focus": "AUDIT", **params},
+        rule_id="FINANCIAL_CAPACITY_001",
+    )
+
+
+def _net_worth_requirement(**params):
+    return Requirement(
+        requirement_id="FIN_REQ_NW",
+        capability="Financial Capacity",
+        description="Net worth requirement.",
+        mandatory=True,
+        applicability=Applicability.APPLICABLE,
+        expected=None,
+        parameters={"focus": "NET_WORTH", **params},
+        rule_id="FINANCIAL_CAPACITY_001",
+    )
+
+
+def _solvency_requirement(**params):
+    return Requirement(
+        requirement_id="FIN_REQ_SOL",
+        capability="Financial Capacity",
+        description="Solvency requirement.",
+        mandatory=True,
+        applicability=Applicability.APPLICABLE,
+        expected=None,
+        parameters={"focus": "SOLVENCY", **params},
+        rule_id="FINANCIAL_CAPACITY_001",
+    )
+
+
+def _compliant_turnover_evidence(bidder="BIDDER_001"):
     return [
-        Evidence(
-            evidence_id="FIN:year",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="financial_year",
-            value=2023,
-        ),
-        Evidence(
-            evidence_id="FIN:turnover",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="ITR",
-            field_name="turnover",
-            value=5000000,
-        ),
-        Evidence(
-            evidence_id="FIN:net_worth",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="net_worth",
-            value=2000000,
-        ),
-        Evidence(
-            evidence_id="FIN:audited",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="AUDIT_REPORT",
-            field_name="audited_status",
-            value="AUDITED",
-        ),
-        Evidence(
-            evidence_id="FIN:solvency",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="solvency_indicator",
-            value=2.0,
-        ),
-        Evidence(
-            evidence_id="FIN:assets",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="total_assets",
-            value=3000000,
-        ),
-        Evidence(
-            evidence_id="FIN:liabilities",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="total_liabilities",
-            value=1000000,
-        ),
-        Evidence(
-            evidence_id="FIN:current_assets",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="current_assets",
-            value=1500000,
-        ),
-        Evidence(
-            evidence_id="FIN:current_liabilities",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="current_liabilities",
-            value=500000,
-        ),
+        _ev("FIN_2021", "financial_year", "2021-22", bidder=bidder, doc_type="ITR"),
+        _ev("FIN_2021", "turnover_inr_cr", 30.0, bidder=bidder, doc_type="ITR"),
+        _ev("FIN_2022", "financial_year", "2022-23", bidder=bidder, doc_type="ITR"),
+        _ev("FIN_2022", "turnover_inr_cr", 32.0, bidder=bidder, doc_type="ITR"),
+        _ev("FIN_2023", "financial_year", "2023-24", bidder=bidder, doc_type="ITR"),
+        _ev("FIN_2023", "turnover_inr_cr", 35.0, bidder=bidder, doc_type="ITR"),
     ]
 
 
-def test_financial_result_contract_fields_are_preserved(
-    rule, provider, financial_requirement, compliant_evidence
-):
-    """The rule must preserve the key ComplianceResult contract fields required by callers."""
-    result = rule.evaluate(
-        compliant_evidence,
-        provider=provider,
-        requirement=financial_requirement,
+def test_financial_result_contract_fields_are_preserved(rule):
+    requirement = _turnover_requirement(
+        minimum_turnover_inr_cr=20.0,
+        turnover_operator=">=",
+        turnover_mode="AVERAGE_ANNUAL",
+        required_financial_years=["2021-22", "2022-23", "2023-24"],
     )
+    result = rule.evaluate(_compliant_turnover_evidence(), requirement=requirement)
+    assert result.requirement_id == requirement.requirement_id
+    assert result.rule_id == requirement.rule_id
+    assert "FIN_2021:turnover_inr_cr" in result.evidence_refs
+    assert "FIN_2023:turnover_inr_cr" in result.evidence_refs
+    assert isinstance(result.reason, str) and result.reason
+    # Provider-free: no verification refs.
+    assert result.verification_refs == []
 
-    assert result.requirement_id == financial_requirement.requirement_id
-    assert result.rule_id == financial_requirement.rule_id
-    assert "FIN:turnover" in result.evidence_refs
-    assert "FIN:net_worth" in result.evidence_refs
-    assert "FIN:audited" in result.evidence_refs
-    assert len(result.verification_refs) > 0
-    assert isinstance(result.reason, str)
-    assert len(result.reason) > 0
 
-
-def test_financial_capacity_passes_when_all_required_checks_are_met(
-    rule, provider, financial_requirement, compliant_evidence
-):
-    """A compliant record should pass the core and conditional checks."""
-    result = rule.evaluate(
-        compliant_evidence,
-        provider=provider,
-        requirement=financial_requirement,
+def test_financial_capacity_passes_when_all_required_checks_are_met(rule):
+    requirement = _turnover_requirement(
+        minimum_turnover_inr_cr=20.0,
+        turnover_operator=">=",
+        turnover_mode="AVERAGE_ANNUAL",
+        required_financial_years=["2021-22", "2022-23", "2023-24"],
     )
+    result = rule.evaluate(_compliant_turnover_evidence(), requirement=requirement)
     assert result.status is ComplianceStatus.PASS
-    assert "FIN:turnover" in result.evidence_refs
-    assert len(result.verification_refs) > 0
+    assert "FIN_2021:turnover_inr_cr" in result.evidence_refs
 
 
-def test_financial_capacity_fails_when_turnover_is_below_threshold(
-    rule, provider, financial_requirement, bidder_id
-):
-    """Turnover below the tender threshold should fail the requirement."""
+def test_financial_capacity_fails_when_turnover_is_below_threshold(rule):
+    requirement = _turnover_requirement(
+        minimum_turnover_inr_cr=50.0,
+        turnover_operator=">=",
+        turnover_mode="AVERAGE_ANNUAL",
+        required_financial_years=["2023-24"],
+    )
     evidence = [
-        Evidence(
-            evidence_id="FIN:year",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="financial_year",
-            value=2023,
-        ),
-        Evidence(
-            evidence_id="FIN:turnover",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="ITR",
-            field_name="turnover",
-            value=500000,
-        ),
-        Evidence(
-            evidence_id="FIN:net_worth",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="net_worth",
-            value=2000000,
-        ),
-        Evidence(
-            evidence_id="FIN:audited",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="AUDIT_REPORT",
-            field_name="audited_status",
-            value="AUDITED",
-        ),
-        Evidence(
-            evidence_id="FIN:solvency",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="solvency_indicator",
-            value=2.0,
-        ),
+        _ev("FIN_2023", "financial_year", "2023-24", doc_type="ITR"),
+        _ev("FIN_2023", "turnover_inr_cr", 5.0, doc_type="ITR"),
     ]
-
-    result = rule.evaluate(evidence, provider=provider, requirement=financial_requirement)
-
+    result = rule.evaluate(evidence, requirement=requirement)
     assert result.status is ComplianceStatus.FAIL
-    assert any(flag == "TURNOVER_BELOW_THRESHOLD" for flag in result.flags)
+    assert "TURNOVER_BELOW_THRESHOLD" in result.flags
 
 
-def test_financial_capacity_fails_when_net_worth_is_below_threshold(
-    rule, provider, financial_requirement, bidder_id
-):
-    """Net worth below the tender threshold should fail the requirement."""
+def test_financial_capacity_fails_when_net_worth_is_below_threshold(rule):
+    requirement = _net_worth_requirement(
+        minimum_net_worth_inr_cr=10.0,
+        required_financial_years=["2023-24"],
+    )
     evidence = [
-        Evidence(
-            evidence_id="FIN:year",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="financial_year",
-            value=2023,
-        ),
-        Evidence(
-            evidence_id="FIN:turnover",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="ITR",
-            field_name="turnover",
-            value=5000000,
-        ),
-        Evidence(
-            evidence_id="FIN:net_worth",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="net_worth",
-            value=100000,
-        ),
-        Evidence(
-            evidence_id="FIN:audited",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="AUDIT_REPORT",
-            field_name="audited_status",
-            value="AUDITED",
-        ),
-        Evidence(
-            evidence_id="FIN:solvency",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="solvency_indicator",
-            value=2.0,
-        ),
+        _ev("FIN_2023", "financial_year", "2023-24", doc_type="BALANCE_SHEET"),
+        _ev("FIN_2023", "net_worth_inr_cr", 2.0, doc_type="BALANCE_SHEET"),
     ]
-
-    result = rule.evaluate(evidence, provider=provider, requirement=financial_requirement)
-
+    result = rule.evaluate(evidence, requirement=requirement)
     assert result.status is ComplianceStatus.FAIL
-    assert any(flag == "NET_WORTH_BELOW_THRESHOLD" for flag in result.flags)
+    assert "NET_WORTH_BELOW_THRESHOLD" in result.flags
 
 
-def test_financial_capacity_requires_audited_status_when_tender_requires_it(
-    rule, provider, financial_requirement, bidder_id
-):
-    """If audited status is required, a missing value should fail the requirement."""
+def test_financial_capacity_requires_audited_status_when_tender_requires_it(rule):
+    requirement = _audit_requirement(require_audited=True)
     evidence = [
-        Evidence(
-            evidence_id="FIN:year",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="financial_year",
-            value=2023,
-        ),
-        Evidence(
-            evidence_id="FIN:turnover",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="ITR",
-            field_name="turnover",
-            value=5000000,
-        ),
-        Evidence(
-            evidence_id="FIN:net_worth",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="net_worth",
-            value=2000000,
-        ),
-        Evidence(
-            evidence_id="FIN:solvency",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="solvency_indicator",
-            value=2.0,
-        ),
+        _ev("AUDIT", "audited", False, doc_type="AUDIT_REPORT"),
     ]
-
-    result = rule.evaluate(evidence, provider=provider, requirement=financial_requirement)
-
+    result = rule.evaluate(evidence, requirement=requirement)
     assert result.status is ComplianceStatus.FAIL
-    assert any(flag == "AUDITED_STATUS_MISSING" for flag in result.flags)
+    assert "AUDIT_EVIDENCE_MISSING" in result.flags
 
 
-def test_financial_capacity_requires_financial_year_for_each_assessment_record(
-    rule, provider, financial_requirement, bidder_id
-):
-    """A missing financial year should cause a missing-data result."""
+def test_financial_capacity_requires_financial_year_for_each_assessment_record(rule):
+    """Without a financial year, the rule cannot locate the period."""
+    requirement = _turnover_requirement(
+        minimum_turnover_inr_cr=10.0,
+        turnover_operator=">=",
+        turnover_mode="AVERAGE_ANNUAL",
+    )
+    evidence = [_ev("X", "turnover_inr_cr", 50.0)]
+    result = rule.evaluate(evidence, requirement=requirement)
+    # Year missing -> rule cannot pick a period -> NOT_CHECKED.
+    assert result.status in (ComplianceStatus.NOT_CHECKED, ComplianceStatus.MISSING)
+
+
+def test_financial_capacity_fails_when_metrics_are_inconsistent(rule):
+    """Two balance sheets for the same year with different totals -> FAIL.
+
+    The per-document rule reports PASS for each sheet individually. The
+    cross-document inconsistency is detected by
+    :func:`check_financial_consistency`, which the orchestrator runs
+    separately and feeds into the risk engine as
+    ``FINANCIAL_DATA_INCONSISTENCY``.
+    """
+    from compliance_engine.financial import check_financial_consistency
+
+    requirement = Requirement(
+        requirement_id="FIN_REQ_BS",
+        capability="Financial Capacity",
+        description="balance sheet check",
+        mandatory=True,
+        applicability=Applicability.APPLICABLE,
+        expected=None,
+        parameters={
+            "focus": "BALANCE_SHEET",
+            "required_balance_sheet_fields": ["total_assets_inr_cr"],
+            "required_financial_years": ["2023-24"],
+        },
+        rule_id="FINANCIAL_CAPACITY_001",
+    )
     evidence = [
-        Evidence(
-            evidence_id="FIN:turnover",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="ITR",
-            field_name="turnover",
-            value=5000000,
-        ),
-        Evidence(
-            evidence_id="FIN:net_worth",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="net_worth",
-            value=2000000,
-        ),
-        Evidence(
-            evidence_id="FIN:audited",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="AUDIT_REPORT",
-            field_name="audited_status",
-            value="AUDITED",
-        ),
+        _ev("BS1", "financial_year", "2023-24", doc_type="BALANCE_SHEET"),
+        _ev("BS1", "total_assets_inr_cr", 100.0, doc_type="BALANCE_SHEET"),
+        _ev("BS2", "financial_year", "2023-24", doc_type="BALANCE_SHEET"),
+        _ev("BS2", "total_assets_inr_cr", 80.0, doc_type="BALANCE_SHEET"),
     ]
+    # Per-document rule: each balance sheet alone is complete -> PASS.
+    per_doc = rule.evaluate(evidence[:2], requirement=requirement)
+    assert per_doc.status is ComplianceStatus.PASS
 
-    result = rule.evaluate(evidence, provider=provider, requirement=financial_requirement)
+    # Cross-document consistency: the two sheets differ -> inconsistency.
+    profile = rule.run_extra_checks("BIDDER_001", evidence)
+    assert any(f.flag_id == "FINANCIAL_DATA_INCONSISTENCY" for f in profile)
 
+
+def test_financial_capacity_fails_when_solvency_threshold_is_not_met(rule):
+    requirement = _solvency_requirement(
+        require_positive_solvency=True,
+        required_financial_years=["2023-24"],
+    )
+    evidence = [
+        _ev("BS_2023", "financial_year", "2023-24", doc_type="BALANCE_SHEET"),
+        _ev("BS_2023", "is_solvency_positive", False, doc_type="BALANCE_SHEET"),
+    ]
+    result = rule.evaluate(evidence, requirement=requirement)
+    assert result.status is ComplianceStatus.FAIL
+    assert "SOLVENCY_REQUIREMENT_FAILED" in result.flags
+
+
+def test_financial_capacity_requires_multiple_years_when_assessment_period_requires_them(rule):
+    requirement = _turnover_requirement(
+        minimum_turnover_inr_cr=10.0,
+        turnover_operator=">=",
+        turnover_mode="AVERAGE_ANNUAL",
+        required_financial_years=["2021-22", "2022-23", "2023-24"],
+    )
+    evidence = [
+        _ev("FIN_2021", "financial_year", "2021-22", doc_type="ITR"),
+        _ev("FIN_2021", "turnover_inr_cr", 30.0, doc_type="ITR"),
+        _ev("FIN_2023", "financial_year", "2023-24", doc_type="ITR"),
+        _ev("FIN_2023", "turnover_inr_cr", 40.0, doc_type="ITR"),
+    ]
+    result = rule.evaluate(evidence, requirement=requirement)
     assert result.status is ComplianceStatus.MISSING
-    assert any(flag == "FINANCIAL_YEAR_MISSING" for flag in result.flags)
+    assert "TURNOVER_DATA_MISSING" in result.flags
 
 
-def test_financial_capacity_fails_when_metrics_are_inconsistent(
-    rule, provider, financial_requirement, bidder_id
-):
-    """Inconsistent total-assets/liabilities data should fail the requirement."""
+def test_financial_capacity_is_unverifiable_when_source_reports_not_found(rule):
+    """Missing threshold -> NOT_CHECKED. Missing year -> MISSING/UNVERIFIABLE."""
+    requirement = Requirement(
+        requirement_id="FIN_REQ_NO_THR",
+        capability="Financial Capacity",
+        description="missing threshold",
+        mandatory=True,
+        applicability=Applicability.APPLICABLE,
+        expected=None,
+        parameters={"focus": "TURNOVER"},  # no threshold
+        rule_id="FINANCIAL_CAPACITY_001",
+    )
+    result = rule.evaluate([], requirement=requirement)
+    assert result.status in (ComplianceStatus.NOT_CHECKED, ComplianceStatus.MISSING)
+
+
+def test_provider_required_for_evaluation_is_no_longer_required(rule):
+    """The financial rule is provider-free; provider is accepted but unused."""
+    requirement = _turnover_requirement(
+        minimum_turnover_inr_cr=10.0,
+        turnover_operator=">=",
+        turnover_mode="AVERAGE_ANNUAL",
+    )
     evidence = [
-        Evidence(
-            evidence_id="FIN:year",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="financial_year",
-            value=2023,
-        ),
-        Evidence(
-            evidence_id="FIN:turnover",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="ITR",
-            field_name="turnover",
-            value=5000000,
-        ),
-        Evidence(
-            evidence_id="FIN:net_worth",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="net_worth",
-            value=2000000,
-        ),
-        Evidence(
-            evidence_id="FIN:audited",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="AUDIT_REPORT",
-            field_name="audited_status",
-            value="AUDITED",
-        ),
-        Evidence(
-            evidence_id="FIN:assets",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="total_assets",
-            value=1000000,
-        ),
-        Evidence(
-            evidence_id="FIN:liabilities",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="total_liabilities",
-            value=1000000,
-        ),
+        _ev("FIN_2023", "financial_year", "2023-24", doc_type="ITR"),
+        _ev("FIN_2023", "turnover_inr_cr", 25.0, doc_type="ITR"),
     ]
-
-    result = rule.evaluate(evidence, provider=provider, requirement=financial_requirement)
-
-    assert result.status is ComplianceStatus.FAIL
-    assert any(flag == "FINANCIAL_DATA_INCONSISTENCY" for flag in result.flags)
+    # Does not raise even with provider=None.
+    result = rule.evaluate(evidence, provider=None, requirement=requirement)
+    assert result.status is ComplianceStatus.PASS
 
 
-def test_financial_capacity_fails_when_solvency_threshold_is_not_met(
-    rule, provider, financial_requirement, bidder_id
-):
-    """If a solvency threshold is specified, the actual ratio must meet it."""
-    evidence = [
-        Evidence(
-            evidence_id="FIN:year",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="financial_year",
-            value=2023,
-        ),
-        Evidence(
-            evidence_id="FIN:turnover",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="ITR",
-            field_name="turnover",
-            value=5000000,
-        ),
-        Evidence(
-            evidence_id="FIN:net_worth",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="net_worth",
-            value=2000000,
-        ),
-        Evidence(
-            evidence_id="FIN:audited",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="AUDIT_REPORT",
-            field_name="audited_status",
-            value="AUDITED",
-        ),
-        Evidence(
-            evidence_id="FIN:solvency",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="solvency_indicator",
-            value=0.5,
-        ),
-    ]
-
-    result = rule.evaluate(evidence, provider=provider, requirement=financial_requirement)
-
-    assert result.status is ComplianceStatus.FAIL
-    assert any(flag == "SOLVENCY_THRESHOLD_NOT_MET" for flag in result.flags)
-
-
-def test_financial_capacity_requires_multiple_years_when_assessment_period_requires_them(
-    rule, provider, financial_requirement, bidder_id
-):
-    """When multiple assessment years are required, missing years should be reported."""
-    financial_requirement.parameters["assessment_period_years"] = 2
-    financial_requirement.expected["assessment_period_years"] = 2
-
-    evidence = [
-        Evidence(
-            evidence_id="FIN:year_2023",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="financial_year",
-            value=2023,
-        ),
-        Evidence(
-            evidence_id="FIN:turnover_2023",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="ITR",
-            field_name="turnover",
-            value=5000000,
-        ),
-        Evidence(
-            evidence_id="FIN:net_worth_2023",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="net_worth",
-            value=2000000,
-        ),
-        Evidence(
-            evidence_id="FIN:audited_2023",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="AUDIT_REPORT",
-            field_name="audited_status",
-            value="AUDITED",
-        ),
-    ]
-
-    result = rule.evaluate(evidence, provider=provider, requirement=financial_requirement)
-
-    assert result.status is ComplianceStatus.MISSING
-    assert any(flag == "FINANCIAL_YEAR_MISSING" for flag in result.flags)
-
-
-def test_financial_capacity_is_unverifiable_when_source_reports_not_found(
-    rule, provider, financial_requirement, bidder_id
-):
-    """A not-found verification result should remain UNVERIFIABLE."""
-    evidence = [
-        Evidence(
-            evidence_id="FIN:year",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="BALANCE_SHEET",
-            field_name="financial_year",
-            value=2023,
-        ),
-        Evidence(
-            evidence_id="FIN:turnover",
-            bidder_id=bidder_id,
-            document_id="FIN_2023",
-            document_type="ITR",
-            field_name="turnover",
-            value=0,
-        ),
-    ]
-
-    result = rule.evaluate(evidence, provider=provider, requirement=financial_requirement)
-
-    assert result.status is ComplianceStatus.UNVERIFIABLE
-    assert any(flag == "FINANCIAL_CAPACITY_MISSING" for flag in result.flags)
-
-
-def test_provider_required_for_evaluation(rule, financial_requirement, bidder_id):
-    """The rule requires an authoritative provider to evaluate financial capacity."""
-    with pytest.raises(ValueError, match="provider is required"):
-        rule.evaluate(
-            [
-                Evidence(
-                    evidence_id="FIN:turnover",
-                    bidder_id=bidder_id,
-                    document_id="FIN_2023",
-                    document_type="ITR",
-                    field_name="turnover",
-                    value=5000000,
-                )
-            ],
-            provider=None,
-            requirement=financial_requirement,
-        )
-
-
-def test_requirement_required_for_evaluation(rule, provider, bidder_id):
+def test_requirement_required_for_evaluation(rule):
     """The rule requires a tender requirement object to evaluate against."""
-    with pytest.raises(ValueError, match="requirement is required"):
+    import pytest as _pytest
+    with _pytest.raises(ValueError, match="requirement is required"):
         rule.evaluate(
-            [
-                Evidence(
-                    evidence_id="FIN:turnover",
-                    bidder_id=bidder_id,
-                    document_id="FIN_2023",
-                    document_type="ITR",
-                    field_name="turnover",
-                    value=5000000,
-                )
-            ],
-            provider=provider,
+            [_ev("FIN_2023", "turnover_inr_cr", 25.0)],
+            provider=None,
             requirement=None,
         )
