@@ -63,11 +63,7 @@ def test_engine_validates_required_providers():
     requirement = Requirement(
         requirement_id="test_req",
         capability=Capability.GST,
-<<<<<<< HEAD
         description="Test GST requirement",
-=======
-        description="Test requirement for provider validation",
->>>>>>> 655b58c (cross bidder input corpus contract done)
         mandatory=True,
         rule_id="MOCK_GST_RULE",
         expected="ACTIVE",
@@ -93,14 +89,10 @@ def test_engine_validates_required_providers():
     # Should get a UNVERIFIABLE result because GST provider is not registered
     assert len(result.compliance_results) == 1
     assert result.compliance_results[0].status.name == "UNVERIFIABLE"
-<<<<<<< HEAD
     assert (
         "No verification provider is registered for capability"
         in result.compliance_results[0].reason
     )
-=======
-    assert "No verification provider is registered for capability" in result.compliance_results[0].reason
->>>>>>> 655b58c (cross bidder input corpus contract done)
 
 
 def test_engine_works_with_providers_registered():
@@ -167,11 +159,7 @@ def test_engine_works_with_providers_registered():
     requirement = Requirement(
         requirement_id="test_req",
         capability=Capability.GST,
-<<<<<<< HEAD
         description="Test GST requirement",
-=======
-        description="Test requirement for provider registration",
->>>>>>> 655b58c (cross bidder input corpus contract done)
         mandatory=True,
         rule_id="MOCK_GST_RULE",
         expected="ACTIVE",
