@@ -97,6 +97,13 @@ _FLAGS: tuple[FlagDefinition, ...] = (
         "Audited status missing",
     ),
     _flag(
+        "AUDIT_EVIDENCE_MISSING",
+        FlagSeverity.MEDIUM,
+        "Financial Capacity",
+        "Audit evidence missing",
+        "Audit evidence missing",
+    ),
+    _flag(
         "AUDIT_TRAIL_INCOMPLETE",
         FlagSeverity.MEDIUM,
         "Auditability / Evidence Traceability",
@@ -228,6 +235,13 @@ _FLAGS: tuple[FlagDefinition, ...] = (
         "BIS / Product Certification",
         "BIS certificate suspended or revoked",
         "BIS certificate suspended or revoked",
+    ),
+    _flag(
+        "BALANCE_SHEET_INCOMPLETE",
+        FlagSeverity.MEDIUM,
+        "Financial Capacity",
+        "Balance sheet incomplete",
+        "Balance sheet incomplete",
     ),
     _flag(
         "BIS_FACILITY_LOCATION_INELIGIBLE",
@@ -851,6 +865,13 @@ _FLAGS: tuple[FlagDefinition, ...] = (
         "Financial year missing",
     ),
     _flag(
+        "FINANCIAL_YEAR_MISMATCH",
+        FlagSeverity.MEDIUM,
+        "Financial Capacity",
+        "Financial year mismatch",
+        "Financial year mismatch",
+    ),
+    _flag(
         "GROUNDING_INSUFFICIENT",
         FlagSeverity.MEDIUM,
         "Evidence Quality Checks",
@@ -1320,6 +1341,13 @@ _FLAGS: tuple[FlagDefinition, ...] = (
         "Solvency threshold not met",
     ),
     _flag(
+        "SOLVENCY_REQUIREMENT_FAILED",
+        FlagSeverity.HIGH,
+        "Financial Capacity",
+        "Solvency requirement failed",
+        "Solvency requirement failed",
+    ),
+    _flag(
         "SOURCE_DOCUMENT_UNRECOVERABLE",
         FlagSeverity.HIGH,
         "Auditability / Evidence Traceability",
@@ -1486,6 +1514,27 @@ _FLAGS: tuple[FlagDefinition, ...] = (
         "Financial Capacity",
         "Turnover below threshold",
         "Turnover below threshold",
+    ),
+    _flag(
+        "TURNOVER_PERIOD_MISMATCH",
+        FlagSeverity.MEDIUM,
+        "Financial Capacity",
+        "Turnover period mismatch",
+        "Turnover period mismatch",
+    ),
+    _flag(
+        "TURNOVER_DATA_MISSING",
+        FlagSeverity.MEDIUM,
+        "Financial Capacity",
+        "Turnover data missing",
+        "Turnover data missing",
+    ),
+    _flag(
+        "TURNOVER_TREND_ANOMALY",
+        FlagSeverity.MEDIUM,
+        "Financial Capacity",
+        "Turnover trend anomaly",
+        "Turnover trend anomaly",
     ),
     _flag(
         "UDYAM_CATEGORY_MISMATCH",
