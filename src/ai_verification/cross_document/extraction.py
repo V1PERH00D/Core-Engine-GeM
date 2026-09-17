@@ -77,6 +77,10 @@ FIELD_CLASSIFICATION: dict[tuple[str, str], FieldSpec] = {
     ("OEM_AUTHORIZATION", "manufacturer"): FieldSpec(
         ConsistencyDimension.MANUFACTURER
     ),
+    ("BIS", "manufacturer"): FieldSpec(ConsistencyDimension.MANUFACTURER),
+    ("BIS_CERTIFICATION", "manufacturer"): FieldSpec(ConsistencyDimension.MANUFACTURER),
+    ("BIS", "product_description"): FieldSpec(ConsistencyDimension.PRODUCT),
+    ("BIS_CERTIFICATION", "product_description"): FieldSpec(ConsistencyDimension.PRODUCT),
     ("MAKE_IN_INDIA", "supplier_class"): FieldSpec(ConsistencyDimension.PRODUCT),
     ("PRODUCT", "product_description"): FieldSpec(ConsistencyDimension.PRODUCT),
 }

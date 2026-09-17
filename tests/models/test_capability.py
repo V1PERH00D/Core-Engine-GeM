@@ -69,7 +69,13 @@ def test_canonical_ids_documented_for_current_capabilities() -> None:
         "PAN_INCOME_TAX",
         "UDYAM",
         "FINANCIAL",
+        "MAKE_IN_INDIA",
+        "BIS",
+        "DIGILOCKER",
+        "OEM_AUTHORIZATION",
         "BIDDER_IDENTITY",
+        "MCA21",
+        "DEBARMENT",
     }
     actual = {member.value for member in Capability}
     assert expected == actual
@@ -332,7 +338,19 @@ def test_capability_module_documents_machine_id_mapping() -> None:
     from compliance_engine.models import capability as cap_module
 
     source = inspect.getsource(cap_module)
-    for canonical in ("GST", "PAN_INCOME_TAX", "UDYAM", "FINANCIAL", "BIDDER_IDENTITY"):
+    for canonical in (
+        "GST",
+        "PAN_INCOME_TAX",
+        "UDYAM",
+        "FINANCIAL",
+        "MAKE_IN_INDIA",
+        "BIS",
+        "DIGILOCKER",
+        "OEM_AUTHORIZATION",
+        "BIDDER_IDENTITY",
+        "MCA21",
+        "DEBARMENT",
+    ):
         assert canonical in source, (
             f"Capability module docstring does not mention canonical ID {canonical!r}"
         )

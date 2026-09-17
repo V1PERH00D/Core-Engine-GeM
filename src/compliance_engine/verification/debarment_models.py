@@ -450,7 +450,7 @@ class DebarmentConfig(BaseModel):
 
 
 DEBARMENT_SOURCE: Final[str] = "DEBARMENT_REGISTRY"
-DEBARMENT_CAPABILITY: Final[str] = "PROCUREMENT_ELIGIBILITY"
+DEBARMENT_CAPABILITY: Final[str] = "DEBARMENT"
 
 
 __all__ = [

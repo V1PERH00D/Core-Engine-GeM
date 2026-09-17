@@ -1,6 +1,13 @@
 """Authoritative verification providers."""
 
 from compliance_engine.verification.base import MockGSTProvider, VerificationProvider
+from compliance_engine.verification.bis_adapter import (
+    BisAdapter,
+    BisQuery,
+    BisResponseEnvelope,
+    BisResponseParser,
+    NormalizedBisData,
+)
 from compliance_engine.verification.debarment_adapter import (
     DEBARMENT_CAPABILITY as DEBARMENT_CAPABILITY_ID,
     DEBARMENT_SOURCE as DEBARMENT_SOURCE_ID,
@@ -36,6 +43,13 @@ from compliance_engine.verification.debarment_models import (
     NormalizedDebarmentData,
     SubjectType,
     normalize_identifier,
+)
+from compliance_engine.verification.digilocker_adapter import (
+    DigiLockerAdapter,
+    DigiLockerQuery,
+    DigiLockerResponseEnvelope,
+    DigiLockerResponseParser,
+    NormalizedDigiLockerData,
 )
 from compliance_engine.verification.gst_config import (
     GST_ENV_PRODUCTION,
@@ -127,6 +141,10 @@ from compliance_engine.verification.udyam_adapter import (
 from compliance_engine.models.verification import VerificationStatus
 
 __all__ = [
+    "BisAdapter",
+    "BisQuery",
+    "BisResponseEnvelope",
+    "BisResponseParser",
     "DEBARMENT_CAPABILITY",
     "DEBARMENT_CAPABILITY_ID",
     "DEBARMENT_ENV_PRODUCTION",
@@ -148,6 +166,10 @@ __all__ = [
     "DebarmentResponseParser",
     "DebarmentRestrictionStatus",
     "DebarmentRestrictionType",
+    "DigiLockerAdapter",
+    "DigiLockerQuery",
+    "DigiLockerResponseEnvelope",
+    "DigiLockerResponseParser",
     "FILING_STATUS_FILED",
     "FILING_STATUS_NOT_FILED",
     "GSTNAdapter",
@@ -178,7 +200,9 @@ __all__ = [
     "MockGSTProvider",
     "MockPANProvider",
     "MockUdyamProvider",
+    "NormalizedBisData",
     "NormalizedDebarmentData",
+    "NormalizedDigiLockerData",
     "NormalizedGstData",
     "NormalizedGstReturnFilingData",
     "NormalizedMcaData",

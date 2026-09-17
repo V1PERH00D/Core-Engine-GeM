@@ -32,6 +32,7 @@ from typing import Any
 
 from compliance_engine.flags import get_flag_definition
 from compliance_engine.models import (
+    Capability,
     ComplianceResult,
     ComplianceStatus,
     Evidence,
@@ -212,12 +213,12 @@ class DebarmentEligibilityRule(Rule):
 
     Rule id: ``DEBARMENT_ELIGIBILITY_001``.
     Required providers: a single :class:`VerificationProvider`
-    configured for the ``PROCUREMENT_ELIGIBILITY`` capability.
+    configured for the ``DEBARMENT`` capability.
     """
 
     rule_id = "DEBARMENT_ELIGIBILITY_001"
     name = "Procurement debarment / eligibility"
-    required_providers = ()  # Capability-equivalent is free-form; engine looks up by capability string.
+    required_providers = (Capability.DEBARMENT,)
 
     def evaluate(
         self,
