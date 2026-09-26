@@ -32,8 +32,11 @@ def test_schema_migration_includes_explanation_metadata_columns():
 
 
 def test_migrations_include_v2():
-    assert MIGRATIONS[-1].version == 2
-    assert MIGRATIONS[-1].name == "explanation_metadata"
+    # Migration v2 (explanation_metadata) must be present; later
+    # migrations may exist after it (e.g. submission-scoped compliance).
+    v2 = [m for m in MIGRATIONS if m.version == 2]
+    assert len(v2) == 1
+    assert v2[0].name == "explanation_metadata"
 
 
 def test_explanation_record_roundtrip_metadata():

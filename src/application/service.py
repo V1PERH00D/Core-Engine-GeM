@@ -39,6 +39,7 @@ from ai_verification.models.contracts import (
     VerificationFinding,
     VerificationInput,
 )
+from compliance_engine.anomalies.identity import verify_cross_document_identity
 from compliance_engine.engine import ComplianceEngine
 from compliance_engine.flags import FLAG_REGISTRY
 from compliance_engine.models import (
@@ -322,10 +323,25 @@ class ComplianceApplicationService:
         # 2. VERIFICATION: deterministic rule + provider evaluation.
         self._advance(sid, ProcessingStage.VERIFICATION_PENDING, correlation_id)
         engine_result = self._compliance_engine.run(
-            submission.evidence, submission.requirements
+            submission.evidence, submission.requirements, submission_id=sid
         )
+        # Cross-document identity reconciliation is a DOWNSTREAM concern
+        # (ComplianceEngine.run no longer executes it and always returns
+        # identity_findings=[]). The application layer computes the
+        # evidence-level identity findings here and attaches them to its
+        # own copy of the result for downstream projection/persistence.
+        identity_findings = verify_cross_document_identity(
+            list(submission.evidence)
+        )
+        if identity_findings:
+            engine_result = engine_result.model_copy(
+                update={"identity_findings": identity_findings}
+            )
         self._persist_engine_outputs(
-            bidder_id, engine_result, correlation_id=correlation_id
+            bidder_id,
+            sid,
+            engine_result,
+            correlation_id=correlation_id,
         )
         self._advance(sid, ProcessingStage.VERIFIED, correlation_id)
 
@@ -429,6 +445,7 @@ class ComplianceApplicationService:
     def _persist_engine_outputs(
         self,
         bidder_id: str,
+        submission_id: str,
         engine_result: EngineResult,
         *,
         correlation_id: str,
@@ -462,8 +479,9 @@ class ComplianceApplicationService:
                 uow.repos.compliance_results.save(
                     ComplianceResultRecord(
                         result_id=compliance_result_id(
-                            bidder_id, result.requirement_id
+                            submission_id, bidder_id, result.requirement_id
                         ),
+                        submission_id=submission_id,
                         bidder_id=bidder_id,
                         requirement_id=result.requirement_id,
                         capability=result.capability,

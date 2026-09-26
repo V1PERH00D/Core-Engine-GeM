@@ -47,7 +47,7 @@ def _persist_bis_chain(uow, clock):
     )
     uow.repos.compliance_results.save(
         ComplianceResultRecord(
-            result_id="r-bis", bidder_id="bidder-26100", requirement_id="req-bis",
+            result_id="r-bis", submission_id="sub-26100", bidder_id="bidder-26100", requirement_id="req-bis",
             capability="BIS", status="FAIL", reason="BIS certificate expired",
             evidence_refs=["ev-bis"], verification_refs=["v-bis"],
             created_at=clock(), updated_at=clock(),

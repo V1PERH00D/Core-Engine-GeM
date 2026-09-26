@@ -76,7 +76,7 @@ def test_full_real_finding_flow():
             FindingRecord(finding_id="f1", bidder_id="b1", finding_type="VERIFICATION", flag_id="GSTIN_MISSING", evidence_refs=["e1"], verification_refs=["v1"], created_at=clock())
         )
         uow.repos.compliance_results.save(
-            ComplianceResultRecord(result_id="r1", bidder_id="b1", requirement_id="req1", capability="GST", status="FAIL", reason="not found", evidence_refs=["e1"], verification_refs=["v1"], created_at=clock(), updated_at=clock())
+            ComplianceResultRecord(result_id="r1", submission_id="s1", bidder_id="b1", requirement_id="req1", capability="GST", status="FAIL", reason="not found", evidence_refs=["e1"], verification_refs=["v1"], created_at=clock(), updated_at=clock())
         )
         uow.repos.flags.save_state(
             FlagStateRecord(bidder_id="b1", flag_id="GSTIN_MISSING", is_set=True, finding_refs=["f1"], evidence_refs=["e1"], verification_refs=["v1"], updated_at=clock())

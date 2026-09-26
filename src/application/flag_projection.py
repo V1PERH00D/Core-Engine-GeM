@@ -29,9 +29,16 @@ from infrastructure.persistence.records import FlagStateRecord
 PROJECTION_SOURCE = "APPLICATION_PROJECTION"
 
 
-def compliance_result_id(bidder_id: str, requirement_id: str) -> str:
-    """Deterministic durable ID for one persisted compliance result."""
-    return f"res:{bidder_id}:{requirement_id}"
+def compliance_result_id(
+    submission_id: str, bidder_id: str, requirement_id: str
+) -> str:
+    """Deterministic durable ID for one persisted compliance result.
+
+    Compliance results are submission-scoped: the same bidder and
+    requirement evaluated in two different submissions must produce two
+    distinct durable records.
+    """
+    return f"res:{submission_id}:{bidder_id}:{requirement_id}"
 
 
 def compliance_finding_id(
