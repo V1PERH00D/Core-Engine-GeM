@@ -25,6 +25,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from ai_verification.document_scoring.models import BidderDocumentScore
 from ai_verification.models.contracts import BidderSummary
 from compliance_engine.models import Evidence, Requirement
 from infrastructure.errors import PermanentValidationError
@@ -207,6 +208,7 @@ class ApplicationResult(BaseModel):
 
     compliance: CompliancePayload
     processing: ProcessingSummary
+    document_score: "BidderDocumentScore | None" = None
     requirements: list[RequirementOutcome] = Field(default_factory=list)
     verifications: list[VerificationSummary] = Field(default_factory=list)
     findings: list[FindingSummary] = Field(default_factory=list)

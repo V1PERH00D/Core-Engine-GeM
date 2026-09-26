@@ -32,6 +32,7 @@ def test_demo_is_deterministic_across_runs():
             first[name].processing.snapshot_id
             == second[name].processing.snapshot_id
         )
+        assert first[name].document_score == second[name].document_score
 
 
 def test_demo_scenario_flags():
@@ -63,6 +64,29 @@ def test_demo_scenario_flags():
 
     cross_bidder = results["cross_bidder"].set_flags()
     assert set(cross_bidder) == {"CROSS_BIDDER_DOCUMENT_REUSED"}
+
+
+def test_demo_document_scores_and_categories() -> None:
+    results = run_demo()
+
+    assert results["clean"].document_score.category.value == "GREEN"
+    assert results["clean"].document_score.submission_id == "sub:demo-bidder-clean-01"
+    assert results["failing"].document_score.category.value == "RED"
+    assert results["missing"].document_score.category.value == "RED"
+    assert results["inconsistent"].document_score.category.value == "RED"
+    assert results["cross_bidder"].document_score.category.value == "RED"
+
+
+def test_demo_document_score_is_separate_from_boolean_contract() -> None:
+    result = run_demo(["failing"])["failing"]
+    payload = result.compliance_payload()
+
+    assert set(payload) == {"bidder_id", "flags"}
+    assert result.document_score is not None
+    assert result.document_score.category.value == "RED"
+    assert 0.0 <= result.document_score.score <= 100.0
+    assert all(isinstance(value, bool) for value in payload["flags"].values())
+
 
 
 def test_demo_output_is_boolean_only_everywhere():

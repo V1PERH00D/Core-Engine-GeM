@@ -1,0 +1,53 @@
+﻿ M .gitignore
+ M README.md
+ M docs/demo-guide.md
+ M src/application/cli.py
+ M src/application/models.py
+ M src/application/service.py
+ M tests/ai_verification/cross_document/test_engine.py
+ M tests/application/test_cli.py
+ M tests/application/test_demo.py
+ M tests/application/test_service.py
+?? docs/document-scoring.md
+?? src/ai_verification/__pycache__/
+?? src/ai_verification/cross_bidder/__pycache__/
+?? src/ai_verification/cross_document/__pycache__/
+?? src/ai_verification/document_scoring/
+?? src/ai_verification/evidence_quality/__pycache__/
+?? src/ai_verification/explanations/__pycache__/
+?? src/ai_verification/identity/__pycache__/
+?? src/ai_verification/models/__pycache__/
+?? src/ai_verification/risk/__pycache__/
+?? src/application/__pycache__/
+?? src/compliance_engine/__pycache__/
+?? src/compliance_engine/anomalies/__pycache__/
+?? src/compliance_engine/audit/__pycache__/
+?? src/compliance_engine/financial/__pycache__/
+?? src/compliance_engine/flags/__pycache__/
+?? src/compliance_engine/ingestion/__pycache__/
+?? src/compliance_engine/models/__pycache__/
+?? src/compliance_engine/rules/__pycache__/
+?? src/compliance_engine/scoring/__pycache__/
+?? src/compliance_engine/verification/__pycache__/
+?? src/infrastructure/__pycache__/
+?? src/infrastructure/artifacts/__pycache__/
+?? src/infrastructure/flags/__pycache__/
+?? src/infrastructure/jobs/__pycache__/
+?? src/infrastructure/persistence/__pycache__/
+?? tests/__pycache__/
+?? tests/ai_verification/__pycache__/
+?? tests/ai_verification/cross_document/__pycache__/
+?? tests/ai_verification/document_scoring/
+?? tests/ai_verification/explanations/__pycache__/
+?? tests/ai_verification/identity/__pycache__/
+?? tests/ai_verification/risk/__pycache__/
+?? tests/anomalies/__pycache__/
+?? tests/application/__pycache__/
+?? tests/engine/__pycache__/
+?? tests/financial/__pycache__/
+?? tests/flags/__pycache__/
+?? tests/infrastructure/__pycache__/
+?? tests/ingestion/__pycache__/
+?? tests/models/__pycache__/
+?? tests/rules/__pycache__/
+?? tests/verification/__pycache__/

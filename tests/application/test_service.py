@@ -26,14 +26,18 @@ from typing import Any
 
 import pytest
 
+from compliance_engine.engine import ComplianceEngine
+from compliance_engine.flags import FLAG_REGISTRY
 from compliance_engine.models import Capability, Verification, VerificationStatus
 from compliance_engine.rules import Rule
 from compliance_engine.verification.base import MockGSTProvider, VerificationProvider
 
-from application.demo import demo_providers, get_scenario
+from application.demo import demo_providers, demo_rules, get_scenario
 from application.models import BidderSubmission, InvalidSubmissionError
+from application.service import ComplianceApplicationService
 from infrastructure.audit import build_flag_lineage
 from infrastructure.errors import ProcessingError, ProviderUnavailableError
+from infrastructure.persistence.unit_of_work import InMemoryUnitOfWork
 from infrastructure.pipeline import ProcessingStage
 from tests.application.conftest import gst_requirement, gst_submission, make_service
 
@@ -366,6 +370,8 @@ def test_repeated_submission_is_idempotent(store, clock):
     # Same durable result, no re-run: identical snapshot reconstructed.
     assert second.processing.snapshot_id == first.processing.snapshot_id
     assert second.compliance == first.compliance
+    assert second.document_score == first.document_score
+    assert first.document_score.submission_id == submission.submission_id
 
     with InMemoryUnitOfWork(store) as uow:
         evidence = uow.repos.evidence.list_by_bidder("bidder-idem")
@@ -374,6 +380,72 @@ def test_repeated_submission_is_idempotent(store, clock):
     assert len(evidence) == len(submission.evidence)
     assert len(results) == 1
     assert len(snapshots) == 1
+
+
+def test_reconstructed_payload_matches_fresh_payload_exactly(store, clock):
+    """A reconstructed result must be byte-identical to the original one.
+
+    ``CompliancePayload`` equality ignores dict key order, so comparing
+    models alone cannot detect a contract that serializes in a different
+    order. ``downstream_payload()`` guarantees *sorted* flag IDs, and the
+    reconstruct path must honor that exactly like the live pipeline path,
+    otherwise the same submission yields two different serializations.
+    """
+    service = make_service(store, clock)
+    submission = gst_submission(
+        "bidder-reconstruct", gstin=MockGSTProvider.GSTIN_VERIFIED
+    )
+
+    fresh = service.process_bid(submission)
+    clock.advance(60.0)
+    reconstructed = service.reconstruct_result(submission.bidder_id)
+
+    assert reconstructed is not None
+    assert reconstructed.compliance == fresh.compliance
+    # Order-sensitive assertions -- these are what actually catch the bug.
+    assert list(reconstructed.compliance.flags) == list(fresh.compliance.flags)
+    assert json.dumps(
+        reconstructed.compliance_payload(), sort_keys=False
+    ) == json.dumps(fresh.compliance_payload(), sort_keys=False)
+    assert list(reconstructed.compliance.flags) == sorted(
+        reconstructed.compliance.flags
+    )
+
+
+def test_reconstructed_payload_is_sorted_for_unsorted_flag_universe(store, clock):
+    """Regression: the flag universe order must not leak into the contract.
+
+    ``known_flag_ids`` defines the order in which flags are materialized
+    into the snapshot. The downstream contract must still be sorted, so a
+    deliberately unsorted universe proves the reconstruct path reads the
+    snapshot through ``downstream_payload()`` rather than raw ``flags``.
+    """
+    service = ComplianceApplicationService(
+        compliance_engine=ComplianceEngine(
+            rules=demo_rules(), providers=demo_providers()
+        ),
+        uow_factory=lambda: InMemoryUnitOfWork(store),
+        # Deliberately reverse-sorted: materially different from sorted order.
+        known_flag_ids=sorted(FLAG_REGISTRY, reverse=True),
+        clock=clock,
+    )
+    submission = gst_submission(
+        "bidder-unsorted", gstin=MockGSTProvider.GSTIN_VERIFIED
+    )
+
+    fresh = service.process_bid(submission)
+    clock.advance(60.0)
+    reconstructed = service.reconstruct_result(submission.bidder_id)
+
+    assert reconstructed is not None
+    fresh_keys = list(fresh.compliance.flags)
+    reconstructed_keys = list(reconstructed.compliance.flags)
+    assert reconstructed_keys == fresh_keys
+    assert fresh_keys == sorted(fresh_keys)
+    assert reconstructed_keys == sorted(reconstructed_keys)
+    assert json.dumps(
+        reconstructed.compliance_payload(), sort_keys=False
+    ) == json.dumps(fresh.compliance_payload(), sort_keys=False)
 
 
 def test_resubmitting_in_flight_submission_is_rejected(store, clock):

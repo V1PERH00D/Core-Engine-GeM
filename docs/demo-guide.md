@@ -38,6 +38,8 @@ BidderSubmission (validated at the boundary)
                                     providers only; no AI decisions
   -> VerificationEngine.run()    -- cross-document identity, cross-bidder
                                     anomaly findings (deterministic)
+  -> DocumentScoringEngine     -- priority-weighted 0-100 score and
+                                   GREEN/YELLOW/RED review category
   -> flag projection             -- boolean FlagStateRecord per flag, with
                                     finding/evidence/verification refs
   -> flag snapshot               -- materialize_flag_snapshot()
@@ -64,7 +66,9 @@ pipeline and is exactly:
 so severity/risk cannot leak into the contract. Supplementary detail
 (requirement statuses, verification statuses, finding IDs, explanation
 IDs and text, snapshot ID, processing stage) lives in *separate* fields
-and never changes the booleans.
+and never changes the booleans. The supplementary `document_score` field
+contains the priority-weighted `0–100` score, `GREEN`/`YELLOW`/`RED`
+category, per-document reasons, and a deterministic summary.
 
 ## 5. Where flags are generated
 

@@ -267,6 +267,24 @@ class FlagSnapshotRecord(BaseModel):
     correlation_id: str | None = None
     created_at: float
 
+    def downstream_payload(self) -> dict[str, Any]:
+        """Return the exact downstream contract shape (sorted flags).
+
+        Mirrors
+        :meth:`infrastructure.flags.snapshot.BidderFlagSnapshot.downstream_payload`
+        so a reconstructed result serializes identically to the one the
+        live pipeline produced. This cannot import that helper directly
+        because ``infrastructure.flags.snapshot`` already imports this
+        module for ``FlagStateRecord``.
+        """
+        return {
+            "bidder_id": self.bidder_id,
+            "flags": {
+                flag_id: self.flags[flag_id]
+                for flag_id in sorted(self.flags)
+            },
+        }
+
 
 # ---------------------------------------------------------------------------
 # Conversions between queue Job and durable job record

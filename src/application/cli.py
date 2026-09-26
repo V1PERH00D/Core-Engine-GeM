@@ -66,6 +66,12 @@ def _print_scenario_summary(name: str, result, explain: bool) -> None:
     print(f"submission:  {result.processing.submission_id} "
           f"({result.processing.stage})")
     print(f"snapshot:    {result.processing.snapshot_id}")
+    if result.document_score is not None:
+        print(
+            f"document:    {result.document_score.category.value} "
+            f"({result.document_score.score:.2f}/100)"
+        )
+        print(f"summary:     {result.document_score.summary}")
     print("compliance contract:")
     print(
         json.dumps(

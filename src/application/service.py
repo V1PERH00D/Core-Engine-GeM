@@ -21,8 +21,14 @@ from __future__ import annotations
 
 import time
 import uuid
+from datetime import UTC, datetime
 from typing import Any, Callable, Iterable
 
+from ai_verification.document_scoring import (
+    BidderDocumentScore,
+    DocumentInput,
+    DocumentScoringEngine,
+)
 from ai_verification.engine import VerificationEngine
 from ai_verification.explanations.engine import ExplanationEngine
 from ai_verification.explanations.facts import FactKind, StructuredFact
@@ -38,7 +44,10 @@ from compliance_engine.flags import FLAG_REGISTRY
 from compliance_engine.models import (
     ComplianceResult,
     EngineResult,
+    Evidence,
     IdentityFinding,
+    Verification,
+    VerificationStatus,
 )
 
 from infrastructure.audit import audit_event
@@ -108,6 +117,7 @@ class ComplianceApplicationService:
         queue: JobQueue | None = None,
         artifact_store: ArtifactStore | None = None,
         known_flag_ids: Iterable[str] | None = None,
+        document_scoring_engine: DocumentScoringEngine | None = None,
         clock: Callable[[], float] | None = None,
     ) -> None:
         self._clock = clock or time.time
@@ -125,6 +135,9 @@ class ComplianceApplicationService:
         self._compliance_engine = compliance_engine
         self._verification_engine = verification_engine
         self._explanation_engine = explanation_engine or ExplanationEngine()
+        self._document_scoring_engine = (
+            document_scoring_engine or DocumentScoringEngine()
+        )
         # ``None`` => the full canonical registry is the flag universe:
         # every known flag appears in the snapshot, defaulting to ``false``.
         self._known_flag_ids = (
@@ -336,7 +349,26 @@ class ComplianceApplicationService:
         )
         self._advance(sid, ProcessingStage.AI_ANALYZED, correlation_id)
 
-        # 4. EXPLANATION: boolean flag projection + snapshot + grounded
+        # 4. DOCUMENT SCORING: supplementary, deterministic diagnostic.
+        document_score = self._document_scoring_engine.score(
+            bidder_id,
+            submission_id=sid,
+            documents=[
+                DocumentInput(
+                    document_id=document.document_id,
+                    document_type=document.document_type,
+                )
+                for document in submission.documents
+            ],
+            requirements=submission.requirements,
+            evidence=submission.evidence,
+            compliance_results=engine_result.compliance_results,
+            verification_records=engine_result.verification_records,
+            findings=verification_findings,
+            identity_findings=engine_result.identity_findings,
+        )
+
+        # 5. EXPLANATION: boolean flag projection + snapshot + grounded
         #    explanations. Flags come only from engine outputs.
         self._advance(sid, ProcessingStage.EXPLANATION_PENDING, correlation_id)
         now = self._clock()
@@ -369,6 +401,7 @@ class ComplianceApplicationService:
             engine_result=engine_result,
             verification_findings=verification_findings,
             explanations=explanations,
+            document_score=document_score,
         )
 
     def _persist_evidence(self, submission: BidderSubmission) -> None:
@@ -685,6 +718,7 @@ class ComplianceApplicationService:
         engine_result: EngineResult,
         verification_findings: list[VerificationFinding],
         explanations: dict[str, ExplanationResult],
+        document_score,
     ) -> ApplicationResult:
         compliance = CompliancePayload(
             bidder_id=bidder_id,
@@ -698,6 +732,7 @@ class ComplianceApplicationService:
                 correlation_id=correlation_id,
                 snapshot_id=snapshot.snapshot_id,
             ),
+            document_score=document_score,
             requirements=[
                 RequirementOutcome(
                     requirement_id=r.requirement_id,
@@ -773,13 +808,31 @@ class ComplianceApplicationService:
                     f"No flag snapshot persisted for bidder {bidder_id!r}."
                 )
             snapshot = max(snapshots, key=lambda s: s.created_at)
+            documents = uow.repos.documents.list_by_submission(submission_id)
+            evidence = uow.repos.evidence.list_by_bidder(bidder_id)
             results = uow.repos.compliance_results.list_by_bidder(bidder_id)
             verifications = uow.repos.verifications.list_by_bidder(bidder_id)
             findings = uow.repos.findings.list_by_bidder(bidder_id)
             explanations = uow.repos.explanations.list_by_bidder(bidder_id)
+        document_score = self._reconstruct_document_score(
+            submission_id,
+            bidder_id,
+            documents,
+            evidence,
+            results,
+            verifications,
+            findings,
+        )
         return ApplicationResult(
             compliance=CompliancePayload(
-                bidder_id=bidder_id, flags=dict(snapshot.flags)
+                bidder_id=bidder_id,
+                # Must go through ``downstream_payload`` exactly like
+                # ``_assemble_result``: it is the single source of truth for
+                # the boolean contract and it sorts the flag IDs. Reading
+                # ``snapshot.flags`` directly would emit the flags in
+                # materialization order, so a reconstructed result would
+                # serialize differently from the original one.
+                flags=dict(snapshot.downstream_payload()["flags"]),
             ),
             processing=ProcessingSummary(
                 submission_id=submission_id,
@@ -787,6 +840,7 @@ class ComplianceApplicationService:
                 correlation_id=submission.correlation_id,
                 snapshot_id=snapshot.snapshot_id,
             ),
+            document_score=document_score,
             requirements=[
                 RequirementOutcome(
                     requirement_id=r.requirement_id,
@@ -826,6 +880,89 @@ class ComplianceApplicationService:
                 )
                 for e in sorted(explanations, key=lambda e: e.explanation_id)
             ],
+        )
+
+    def _reconstruct_document_score(
+        self,
+        submission_id: str,
+        bidder_id: str,
+        documents: list,
+        evidence: list,
+        results: list,
+        verifications: list,
+        findings: list,
+    ) -> BidderDocumentScore:
+        persisted_findings = [
+            VerificationFinding.model_validate(item.payload)
+            for item in findings
+            if item.finding_type == "VERIFICATION" and item.payload
+        ]
+        persisted_identity_findings = [
+            IdentityFinding.model_validate(item.payload)
+            for item in findings
+            if item.finding_type == "IDENTITY" and item.payload
+        ]
+        return self._document_scoring_engine.score(
+            bidder_id,
+            submission_id=submission_id,
+            documents=[
+                DocumentInput(
+                    document_id=document.document_id,
+                    document_type=document.document_type,
+                )
+                for document in documents
+            ],
+            evidence=[
+                Evidence(
+                    evidence_id=item.evidence_id,
+                    bidder_id=item.bidder_id,
+                    document_id=item.document_id,
+                    document_type=item.document_type or "",
+                    field_name=item.field_name,
+                    value=item.value,
+                    confidence=item.confidence,
+                    page=item.page,
+                    bbox=list(item.bbox) if item.bbox else None,
+                )
+                for item in evidence
+            ],
+            compliance_results=[
+                ComplianceResult(
+                    requirement_id=item.requirement_id,
+                    capability=item.capability,
+                    status=item.status,
+                    reason=item.reason,
+                    expected=item.expected,
+                    actual=item.actual,
+                    evidence_refs=list(item.evidence_refs),
+                    verification_refs=list(item.verification_refs),
+                    flags=list(item.flags),
+                    rule_id=item.rule_id or "",
+                )
+                for item in results
+            ],
+            verification_records=[
+                Verification(
+                    verification_id=item.verification_id,
+                    bidder_id=item.bidder_id,
+                    capability=item.capability,
+                    source=item.source,
+                    queried_identifier=item.queried_identifier,
+                    status=VerificationStatus(item.status),
+                    data=item.data,
+                    retrieved_at=datetime.fromtimestamp(item.retrieved_at, tz=UTC),
+                    evidence_id=item.evidence_id,
+                    document_id=item.document_id,
+                    query=item.query,
+                    raw_response=item.raw_response,
+                    latency_ms=item.latency_ms,
+                    correlation_id=item.correlation_id,
+                    transport_status_code=item.transport_status_code,
+                )
+                for item in verifications
+            ],
+            findings=persisted_findings,
+            identity_findings=persisted_identity_findings,
         )
 
 

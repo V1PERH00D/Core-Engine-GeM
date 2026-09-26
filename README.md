@@ -21,6 +21,11 @@ Key properties:
   risk score, no AI decision.
 - **AI is explanation-only** — explanations ground a flag state that the
   deterministic engines already produced; they never create or mutate flags.
+- **Document-priority score** — `ai_verification.document_scoring` produces a
+  deterministic `0–100` diagnostic and `GREEN` / `YELLOW` / `RED` category from
+  document importance, evidence, verification, compliance results, and
+  grounded findings. It is supplementary and never changes the boolean
+  compliance contract.
 - **PostgreSQL** is the durable system of record; **Redis** is transient
   coordination (queue, leases, retries, idempotency); the **ArtifactStore** holds
   source artifacts.
@@ -31,7 +36,7 @@ Key properties:
 
 ```text
 src/compliance_engine/   # rules, verification adapters, canonical flag registry
-src/ai_verification/     # cross-document/cross-bidder analysis + grounded explanations
+src/ai_verification/     # cross-document/cross-bidder analysis, scoring, explanations
 src/infrastructure/      # persistence (PostgreSQL/in-memory), Redis jobs, artifacts, audit
 src/application/         # runnable end-to-end orchestration + demo CLI (no compliance logic)
 tests/                   # pytest suite

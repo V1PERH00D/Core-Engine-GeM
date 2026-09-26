@@ -31,10 +31,11 @@ def test_demo_json_output_keeps_contract_separate(capsys):
     assert all(isinstance(v, bool) for v in data["compliance"]["flags"].values())
 
     # Supplementary detail is structurally separate.
-    for key in ("processing", "requirements", "verifications", "findings",
-                "explanations"):
+    for key in ("processing", "document_score", "requirements", "verifications",
+                "findings", "explanations"):
         assert key in data
     assert data["processing"]["stage"] == "COMPLETE"
+    assert data["document_score"]["category"] == "GREEN"
 
 
 def test_demo_unknown_scenario_fails_cleanly(capsys):
