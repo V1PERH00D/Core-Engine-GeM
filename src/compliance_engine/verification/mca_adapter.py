@@ -9,13 +9,12 @@ Capability / source naming
 --------------------------
 
 The codebase already references ``MCA21`` in the cross-document
-identity-verification alias table (``anomalies/identity.py``). To
-stay consistent with that and to avoid inventing a new compliance
-capability for a non-existent rule, this adapter uses
-``source="MCA21"`` and ``capability="MCA21"`` as a free-form
-capability string. A future milestone that introduces a dedicated
-``MCA`` rule can promote the value to a canonical ``Capability``
-enum entry.
+identity-verification alias table (``anomalies/identity.py``) and in the
+canonical :class:`compliance_engine.models.Capability` enum
+(``Capability.MCA21``). This adapter uses ``source="MCA21"`` and
+``capability="MCA21"`` (the canonical enum member's value) and is consumed
+by :class:`compliance_engine.rules.mca.McaRegistrationRule`
+(``MCA21_REGISTRATION_001``).
 
 This module contains **no** network, credentials, scraping, or
 authentication code.

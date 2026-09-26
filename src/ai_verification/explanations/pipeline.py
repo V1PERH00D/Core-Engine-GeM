@@ -85,8 +85,13 @@ def explanation_idempotency_key(
     )
 
 
-def explanation_job_id(bidder_id: str, flag_id: str, flag_state: bool) -> str:
-    return f"expl-job:{bidder_id}:{flag_id}:{int(flag_state)}"
+def explanation_job_id(
+    bidder_id: str, flag_id: str, flag_state: bool, grounding_hash: str
+) -> str:
+    return (
+        f"expl-job:{bidder_id}:{flag_id}:{int(flag_state)}:"
+        f"{grounding_hash[:12]}"
+    )
 
 
 class ExplanationPipeline:
@@ -119,6 +124,17 @@ class ExplanationPipeline:
     ) -> Job:
         grounding_hash = grounding.content_hash()
         now = self._clock()
+        key = explanation_idempotency_key(
+            bidder_id=bidder_id,
+            flag_id=flag_id,
+            flag_state=flag_state,
+            grounding_hash=grounding_hash,
+        )
+        # Idempotency fast-path: a duplicate delivery returns the existing job.
+        existing = self._queue.find_by_idempotency_key(key)
+        if existing is not None:
+            return existing
+
         payload: dict[str, Any] = {
             "bidder_id": bidder_id,
             "flag_id": flag_id,
@@ -129,14 +145,9 @@ class ExplanationPipeline:
             "locale": locale,
         }
         job = Job(
-            job_id=explanation_job_id(bidder_id, flag_id, flag_state),
+            job_id=explanation_job_id(bidder_id, flag_id, flag_state, grounding_hash),
             job_type=EXPLANATION_JOB_TYPE,
-            idempotency_key=explanation_idempotency_key(
-                bidder_id=bidder_id,
-                flag_id=flag_id,
-                flag_state=flag_state,
-                grounding_hash=grounding_hash,
-            ),
+            idempotency_key=key,
             bidder_id=bidder_id,
             stage=ExplanationJobStage.QUEUED.value,
             correlation_id=correlation_id,

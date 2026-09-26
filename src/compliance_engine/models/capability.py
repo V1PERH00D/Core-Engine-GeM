@@ -14,16 +14,23 @@ does not pre-declare every future capability listed in the matrix.
 Mapping of canonical machine ID to its human-readable section name (for
 documentation only; the engine never reads these names):
 
-    GST                  -> "GST / GSTN"                      (matrix \u00a74)
-    GST_RETURN_FILING    -> "GST / GSTN" (return filing)      (matrix \u00a74)
-    PAN_INCOME_TAX       -> "PAN / Income Tax"                (matrix \u00a75)
-    UDYAM                -> "Udyam / MSME"                    (matrix \u00a76)
-    FINANCIAL            -> "Financial Capacity"              (matrix \u00a77)
-    BIDDER_IDENTITY      -> "Bidder Identity"                 (matrix \u00a73, anomalies)
+    GST                  -> "GST / GSTN"                      (matrix §4)
+    GST_RETURN_FILING    -> "GST / GSTN" (return filing)      (matrix §4)
+    PAN_INCOME_TAX       -> "PAN / Income Tax"                (matrix §5)
+    UDYAM                -> "Udyam / MSME"                    (matrix §6)
+    FINANCIAL            -> "Financial Capacity"              (matrix §7)
+    MAKE_IN_INDIA        -> "Make in India / Local Content"   (matrix §10)
+    BIS                  -> "BIS / Product Certification"     (matrix §15)
+    DIGILOCKER           -> "DigiLocker / Document Verif."    (matrix §16)
+    OEM_AUTHORIZATION    -> "OEM Authorization"               (matrix §17)
+    BIDDER_IDENTITY      -> "Bidder Identity"                 (matrix §3, anomalies)
+    MCA21                -> "MCA21 / Company Registration"    (matrix §9)
+    DEBARMENT            -> "Procurement Eligibility"         (matrix §19)
 
 The IDs ``GST``, ``GST_RETURN_FILING``, ``PAN_INCOME_TAX``, ``UDYAM``,
-``FINANCIAL``, and ``BIDDER_IDENTITY`` are the only ones currently in
-use by the engine.
+``FINANCIAL``, ``MAKE_IN_INDIA``, ``BIS``, ``DIGILOCKER``,
+``OEM_AUTHORIZATION``, ``BIDDER_IDENTITY``, ``MCA21``, and ``DEBARMENT``
+are the only ones currently in use by the engine.
 Any other identifier seen in code is either a human-readable label on a
 ``FlagDefinition`` (out of scope here) or a value to be migrated to a
 canonical ID by a future change.
@@ -46,7 +53,13 @@ class Capability(StrEnum):
     PAN_INCOME_TAX = "PAN_INCOME_TAX"
     UDYAM = "UDYAM"
     FINANCIAL = "FINANCIAL"
+    MAKE_IN_INDIA = "MAKE_IN_INDIA"
+    BIS = "BIS"
+    DIGILOCKER = "DIGILOCKER"
+    OEM_AUTHORIZATION = "OEM_AUTHORIZATION"
     BIDDER_IDENTITY = "BIDDER_IDENTITY"
+    MCA21 = "MCA21"
+    DEBARMENT = "DEBARMENT"
 
 
 __all__ = ["Capability"]
