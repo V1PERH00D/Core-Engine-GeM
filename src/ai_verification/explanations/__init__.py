@@ -46,6 +46,11 @@ from ai_verification.explanations.strategies import (
     StrategyRegistry,
     default_registry,
 )
+from ai_verification.explanations.gemini import (
+    GeminiExplanationModel,
+    explanation_engine_from_env,
+    explanation_model_from_env,
+)
 from ai_verification.explanations.engine import ExplanationEngine
 from ai_verification.explanations.generator import (
     DeterministicFallbackExplanationGenerator,
@@ -76,6 +81,7 @@ __all__ = [
     "ExplanationResult",
     "ExplanationStrategy",
     "FactKind",
+    "GeminiExplanationModel",
     "GroundedExplanation",
     "GroundingKind",
     "GroundingRefKind",
@@ -94,6 +100,8 @@ __all__ = [
     "ValidationStatus",
     "build_context",
     "default_registry",
+    "explanation_engine_from_env",
+    "explanation_model_from_env",
     "render_prompt",
     "to_explanation_record",
 ]

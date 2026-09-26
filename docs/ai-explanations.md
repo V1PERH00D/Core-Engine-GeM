@@ -269,21 +269,55 @@ refs so a human can reconstruct *why* the explanation says what it says.
 
 Durable state is never held *only* in process memory.
 
-## 20. Production model integration
+## 20. Production model integration (Gemini)
 
-Wire a real model by implementing `ExplanationModel` (e.g. via
-`HttpExplanationModel`) and injecting it into `ExplanationEngine` /
-`ExplanationPipeline`. External LLM access is fully injectable and disabled
-in deterministic tests (no network calls in the normal suite).
+The concrete live provider is
+`src/ai_verification/explanations/gemini.py: GeminiExplanationModel`. It
+implements the existing `ExplanationModel` contract against the Gemini
+`generateContent` API over stdlib HTTPS (no new dependencies), with an
+injected `poster` seam so tests never touch the network.
+
+Configuration is environment-only; nothing is hardcoded:
+
+| Variable | Required | Meaning |
+|---|---|---|
+| `GEMINI_API_KEY` | yes, for live mode | Gemini API key. Sent in the `x-goog-api-key` request header only; never logged, persisted, or placed in the URL. |
+| `GEMINI_MODEL` | no | Model name (default `gemini-2.5-flash`). |
+| `GEMINI_API_BASE_URL` | no | Base URL override, HTTPS enforced (default `https://generativelanguage.googleapis.com`). |
+| `GEMINI_TIMEOUT_SECONDS` | no | Per-request timeout (default `30`). |
+
+```python
+from ai_verification.explanations.gemini import explanation_engine_from_env
+
+engine = explanation_engine_from_env()   # Gemini when GEMINI_API_KEY is set,
+                                         # deterministic fallback otherwise
+```
+
+The model receives the guarded rendered prompt (system rules + flag
+identity + bidder ID + supplied facts + evidence/verification/finding/
+document/comparison/trace refs, with every untrusted string inside a
+`<<<UNTRUSTED_EVIDENCE_DATA>>>` block) plus an explicit output contract:
+explain only, decide nothing, invent nothing, no severity/risk, return
+only the explanation text. The answer is enveloped into
+`ExplanationContent` whose reference lists are copied *from the supplied
+prompt*, and then passes the same grounding/claim validation as any other
+model output. Provider failure, HTTP errors, timeouts, malformed or
+invented output all route to the deterministic fallback — flags are never
+touched by any of it.
+
+Demo wiring: `python -m application demo --explanations mock` exercises
+the model path offline; `--explanations gemini` uses the live provider
+(requires `GEMINI_API_KEY`); the default `--explanations fallback` needs
+nothing.
 
 ## 21. Limitations
 
 * Explanations are only as good as the supplied grounding and facts; the
-  engine never re-discovers evidence by scraping files.
+  engine never re-discovered evidence by scraping files.
 * The deterministic fallback is structured-facts-only and does not perform
   free-text reasoning.
-* No production HTTP model / credentials are bundled; the repository ships
-  only the provider seam and a deterministic static provider.
+* No credentials are bundled; without `GEMINI_API_KEY` the system behaves
+  exactly as the pure fallback configuration.
 * Explanations never change flag state, compliance results, verification
   status, evidence values, or finding classification.
 `operator`, `unit`, `financial_year`, `comparison_outcome`,

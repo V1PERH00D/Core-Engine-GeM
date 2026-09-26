@@ -170,22 +170,47 @@ class VerificationSummary(BaseModel):
 
 
 class FindingSummary(BaseModel):
-    """Supplementary finding reference (not part of the contract)."""
+    """Supplementary finding reference (not part of the contract).
+
+    Carries the finding's real provenance (evidence / verification refs,
+    related bidders, cross-bidder trace where applicable) plus the link to
+    the grounded explanation of its flag, so downstream consumers can join
+    finding -> explanation without re-running anything.
+    """
 
     finding_id: str
     flag_id: str | None = None
     finding_type: str
     related_bidder_ids: list[str] = Field(default_factory=list)
+    evidence_refs: list[str] = Field(default_factory=list)
+    verification_refs: list[str] = Field(default_factory=list)
+    trace: dict[str, Any] | None = None
+    explanation_id: str | None = None
 
 
 class ExplanationSummary(BaseModel):
-    """Supplementary explanation reference (not part of the contract)."""
+    """Supplementary explanation reference (not part of the contract).
+
+    ``fallback_used`` and ``provider``/``model`` distinguish a
+    model-generated explanation from the deterministic fallback for audit.
+    The reference lists are exactly the grounding the explanation was
+    allowed to cite; no explanation text ever enters the boolean
+    compliance payload.
+    """
 
     explanation_id: str
     flag_id: str
     text: str
     fallback_used: bool
     validation_status: str | None = None
+    detailed_text: str | None = None
+    provider: str | None = None
+    model: str | None = None
+    evidence_refs: list[str] = Field(default_factory=list)
+    verification_refs: list[str] = Field(default_factory=list)
+    finding_refs: list[str] = Field(default_factory=list)
+    document_refs: list[str] = Field(default_factory=list)
+    trace_refs: list[str] = Field(default_factory=list)
 
 
 class ProcessingSummary(BaseModel):
@@ -217,6 +242,41 @@ class ApplicationResult(BaseModel):
     def compliance_payload(self) -> dict[str, Any]:
         """Return exactly ``{"bidder_id": ..., "flags": {...}}``."""
         return self.compliance.model_dump()
+
+    def findings_payload(self) -> dict[str, Any]:
+        """Return the downstream findings/explanations contract::
+
+            {"bidder_id": "...",
+             "findings": [{"finding_id": ..., "flag_id": ...,
+                           "explanation": ..., "evidence_refs": [...],
+                           "verification_refs": [...],
+                           "related_bidder_ids": [...], "trace": ...}]}
+
+        Fully separate from :meth:`compliance_payload`: explanations never
+        enter the boolean-only flags payload.
+        """
+        explanation_by_flag = {e.flag_id: e for e in self.explanations}
+        findings: list[dict[str, Any]] = []
+        for finding in self.findings:
+            explanation = (
+                explanation_by_flag.get(finding.flag_id)
+                if finding.flag_id
+                else None
+            )
+            findings.append(
+                {
+                    "finding_id": finding.finding_id,
+                    "flag_id": finding.flag_id,
+                    "explanation": (
+                        explanation.text if explanation is not None else None
+                    ),
+                    "evidence_refs": list(finding.evidence_refs),
+                    "verification_refs": list(finding.verification_refs),
+                    "related_bidder_ids": list(finding.related_bidder_ids),
+                    "trace": finding.trace,
+                }
+            )
+        return {"bidder_id": self.compliance.bidder_id, "findings": findings}
 
     def set_flags(self) -> dict[str, bool]:
         """Return only the flags that are TRUE, for human review."""

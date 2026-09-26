@@ -3,12 +3,21 @@
 Usage::
 
     python -m application demo [--scenario NAME] [--json] [--explain]
+                               [--explanations {fallback,mock,gemini}]
     python -m application scenarios
 
 The demo requires no network access, no government API credentials, no
 LLM API key, no PostgreSQL, and no Redis. Everything runs against the
 in-memory persistence/queue backends wired through the same application
 service used for production integration.
+
+Explanations default to the deterministic fallback (``--explanations
+fallback``). ``mock`` routes the same grounded explanation path through a
+deterministic in-process mock model; ``gemini`` uses the live Gemini
+provider and requires ``GEMINI_API_KEY`` (``GEMINI_MODEL`` optional).
+A live model only explains — the boolean compliance flags are fixed
+upstream by the deterministic engines and are identical across all three
+modes.
 """
 
 from __future__ import annotations
@@ -52,9 +61,57 @@ def _build_parser() -> argparse.ArgumentParser:
         help="In human summary mode, also print one explanation line per "
         "set flag.",
     )
+    demo.add_argument(
+        "--explanations",
+        choices=("fallback", "mock", "gemini"),
+        default="fallback",
+        help=(
+            "Explanation generator. 'fallback' (default) is the "
+            "deterministic built-in; 'mock' demonstrates the model path "
+            "offline; 'gemini' calls the live Gemini API and requires "
+            "GEMINI_API_KEY (GEMINI_MODEL to override the default model)."
+        ),
+    )
 
     sub.add_parser("scenarios", help="List the available demo scenarios.")
     return parser
+
+
+def _build_explanation_model(mode: str):
+    """Resolve the CLI explanation mode to an ``ExplanationModel``.
+
+    ``None`` means "no model": the engine's deterministic fallback runs.
+    ``mock`` is a deterministic in-process model for offline demos of the
+    full LLM plumbing. ``gemini`` requires ``GEMINI_API_KEY``.
+    """
+    if mode == "fallback":
+        return None
+    if mode == "mock":
+        from ai_verification.explanations.provider import (
+            StaticExplanationModel,
+        )
+
+        return StaticExplanationModel(
+            model_name="mock-llm:demo", provider_name="mock_llm_demo"
+        )
+    if mode == "gemini":
+        from ai_verification.explanations.gemini import (
+            GEMINI_API_KEY_ENV,
+            GeminiExplanationModel,
+        )
+
+        model = GeminiExplanationModel.from_env()
+        if model is None:
+            print(
+                f"{GEMINI_API_KEY_ENV} is not set; cannot use the live "
+                "Gemini provider. Set GEMINI_API_KEY (and optionally "
+                "GEMINI_MODEL), or run with `--explanations mock` / "
+                "`--explanations fallback`.",
+                file=sys.stderr,
+            )
+            return None
+        return model
+    return None  # pragma: no cover - argparse enforces the choices
 
 
 def _print_scenario_summary(name: str, result, explain: bool) -> None:
@@ -87,9 +144,21 @@ def _print_scenario_summary(name: str, result, explain: bool) -> None:
             + (f" -> flags {requirement.flags}" if requirement.flags else "")
         )
     if explain and set_flags:
-        print("explanations (deterministic fallback, grounded):")
+        print("explanations (grounded; LLM never changes the flags):")
         for explanation in result.explanations:
-            print(f"  - [{explanation.flag_id}] {explanation.text}")
+            source = (
+                "fallback"
+                if explanation.fallback_used
+                else (explanation.provider or "model")
+            )
+            print(
+                f"  - [{explanation.flag_id}] ({source}) {explanation.text}"
+            )
+            print(
+                f"      evidence={explanation.evidence_refs} "
+                f"verifications={explanation.verification_refs} "
+                f"trace={explanation.trace_refs}"
+            )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -102,8 +171,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "demo":
         names = [args.scenario] if args.scenario else None
+        explanation_model = _build_explanation_model(args.explanations)
+        if args.explanations == "gemini" and explanation_model is None:
+            return 2  # live mode requested but GEMINI_API_KEY is absent
         try:
-            results = run_demo(names)
+            results = run_demo(names, explanation_model=explanation_model)
         except KeyError as exc:
             print(str(exc), file=sys.stderr)
             return 2

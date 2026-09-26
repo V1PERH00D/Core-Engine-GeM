@@ -1,0 +1,44 @@
+{
+  "submission_id": "sub-fixture-001",
+  "bidder_id": "bidder-fixture-001",
+  "bidder_name": "ACME Enterprises",
+  "evaluation_date_iso": "2025-01-15",
+  "documents": [
+    {
+      "document_id": "GST_DOC_001",
+      "doc_type": "gst_certificate",
+      "source_filename": "GST_Certificate.pdf",
+      "extracted_fields": {
+        "gstin": "27AAACI1234F1Z5",
+        "registered_address": "Plot 42, Hinjawadi Phase 1, Pune, Maharashtra 411057"
+      }
+    },
+    {
+      "document_id": "PAN_DOC_002",
+      "doc_type": "pan_card",
+      "source_filename": "PAN_Card.pdf",
+      "extracted_fields": {
+        "pan": "AAACI1234F",
+        "taxpayer_name": "ACME ENTERPRISES PRIVATE LIMITED"
+      }
+    },
+    {
+      "document_id": "UDYAM_DOC_003",
+      "doc_type": "udyam_certificate",
+      "source_filename": "Udyam_Certificate.pdf",
+      "extracted_fields": {
+        "udyam": "UDYAM-MH-12-0012345",
+        "registered_address": "89 MG Road, Bengaluru, Karnataka 560001"
+      }
+    },
+    {
+      "document_id": "MII_DOC_004",
+      "doc_type": "make_in_india_local_content",
+      "source_filename": "MII_Local_Content.pdf",
+      "extracted_fields": {
+        "declared_local_content_pct": 68.5,
+        "supplier_class": "Class-I Local Supplier"
+      }
+    }
+  ]
+}

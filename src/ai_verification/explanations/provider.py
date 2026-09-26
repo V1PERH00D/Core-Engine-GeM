@@ -15,6 +15,10 @@ Two concrete implementations are provided:
   provider-agnostic: a caller injects a ``send`` callable and a response
   parser; the model only validates the result into the typed response
   envelope. No Kimi-specific semantics are hard-coded here.
+
+A concrete Gemini provider implementing this contract lives in
+:mod:`ai_verification.explanations.gemini` (API key from the
+``GEMINI_API_KEY`` environment variable, never hardcoded).
 """
 
 from __future__ import annotations
@@ -48,11 +52,19 @@ class ExplanationPrompt(BaseModel):
     flag_title: str | None = None
     flag_description: str | None = None
 
+    #: The bidder whose flag is being explained. Optional for backward
+    #: compatibility with prompts built before bidder identity was part of
+    #: the contract; the engine always supplies it.
+    bidder_id: str | None = None
+
     facts: tuple[StructuredFact, ...] = ()
 
     evidence_refs: tuple[str, ...] = ()
     verification_refs: tuple[str, ...] = ()
     finding_refs: tuple[str, ...] = ()
+    document_refs: tuple[str, ...] = ()
+    comparison_refs: tuple[str, ...] = ()
+    trace_refs: tuple[str, ...] = ()
 
     uncertainties: tuple[str, ...] = ()
 

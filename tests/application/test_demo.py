@@ -113,3 +113,23 @@ def test_demo_provides_both_true_and_false_flags():
     result = run_demo(["failing"])["failing"]
     values = set(result.compliance.flags.values())
     assert values == {True, False}
+
+
+def test_demo_mock_llm_path_runs_offline_and_keeps_flags_identical():
+    # The offline demo can exercise the live-LLM code path via the mock
+    # provider: no network, no GEMINI_API_KEY, flags unchanged.
+    from ai_verification.explanations.provider import StaticExplanationModel
+
+    mock_model = StaticExplanationModel(
+        model_name="mock-llm:demo", provider_name="mock_llm_demo"
+    )
+    with_mock = run_demo(["failing"], explanation_model=mock_model)["failing"]
+    baseline = run_demo(["failing"])["failing"]
+
+    assert with_mock.compliance_payload() == baseline.compliance_payload()
+    assert with_mock.explanations
+    for explanation in with_mock.explanations:
+        assert explanation.fallback_used is False
+        assert explanation.provider == "mock_llm_demo"
+        assert explanation.text
+        assert explanation.evidence_refs or explanation.verification_refs

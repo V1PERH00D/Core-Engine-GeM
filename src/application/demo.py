@@ -11,7 +11,12 @@ Everything in this module is demo-only data:
   clearly synthetic values invented for this demo. They do not belong to
   any real person or company.
 * No network access, government API credentials, or LLM API key is
-  required. Explanations use the deterministic built-in fallback.
+  required. Explanations default to the deterministic built-in fallback;
+  passing ``explanation_model`` to :func:`run_demo` /
+  :func:`build_demo_service` (or ``--explanations mock|gemini`` on the
+  CLI) routes the *same* grounded explanation path through an injected
+  mock model or, when ``GEMINI_API_KEY`` is configured, the live Gemini
+  provider. The model never changes the boolean flags.
 
 The demo tender is a fixed :func:`demo_requirements()` set reusing the
 canonical rule IDs of the Compliance Engine.
@@ -624,11 +629,19 @@ def build_demo_service(
     *,
     store,
     clock: Callable[[], float],
+    explanation_model: Any = None,
 ) -> ComplianceApplicationService:
     """Build the wired application service for one demo scenario.
 
     All state lives in the shared in-memory store, so flag lineage can be
     reconstructed across scenarios by the caller if desired.
+
+    ``explanation_model`` (an ``ExplanationModel``) is optional: ``None``
+    means the deterministic fallback (default, fully offline), a
+    ``StaticExplanationModel`` demonstrates the model path without a
+    network, and ``GeminiExplanationModel.from_env()`` enables the live
+    path when ``GEMINI_API_KEY`` is configured. The model only explains;
+    the boolean flags are fixed upstream either way.
     """
     from infrastructure.persistence.unit_of_work import InMemoryUnitOfWork
 
@@ -639,7 +652,7 @@ def build_demo_service(
     verification_engine = VerificationEngine(
         artifact_store=scenario.document_store
     )
-    explanation_engine = ExplanationEngine()  # deterministic fallback, no LLM
+    explanation_engine = ExplanationEngine(model=explanation_model)
     return ComplianceApplicationService(
         compliance_engine=compliance_engine,
         verification_engine=verification_engine,
@@ -653,12 +666,14 @@ def run_demo(
     names: list[str] | None = None,
     *,
     clock: Callable[[], float] | None = None,
+    explanation_model: Any = None,
 ):
     """Run demo scenarios end-to-end; return ``{scenario: ApplicationResult}``.
 
     Fully deterministic and offline: fixed clock, static demo providers,
-    deterministic explanation fallback. Adds no credentials, performs no
-    network access, and produces no severity or risk data.
+    deterministic explanation fallback (unless an ``explanation_model``
+    is explicitly injected). Adds no credentials, performs no network
+    access, and produces no severity or risk data.
     """
     from infrastructure.persistence.memory import _Store
 
@@ -668,7 +683,10 @@ def run_demo(
     results = {}
     for name in names or scenario_names():
         scenario = get_scenario(name)
-        service = build_demo_service(scenario, store=store, clock=clock)
+        service = build_demo_service(
+            scenario, store=store, clock=clock,
+            explanation_model=explanation_model,
+        )
         results[name] = service.process_bid(scenario.submission_factory())
     return results
 

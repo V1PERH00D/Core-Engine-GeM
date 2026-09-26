@@ -98,6 +98,24 @@ from application.models import (
 COMPLIANCE_JOB_TYPE = "COMPLIANCE_RUN"
 
 
+def _explanation_id_for(
+    explanations: dict[str, ExplanationResult], flag_id: str | None
+) -> str | None:
+    """Link a finding's flag to the explanation generated for it, if any."""
+    if flag_id is None:
+        return None
+    explanation = explanations.get(flag_id)
+    return explanation.explanation_id if explanation is not None else None
+
+
+def _generation_meta(generation: Any, key: str) -> str | None:
+    """Read one key from a persisted generation-metadata dict, defensively."""
+    if isinstance(generation, dict):
+        value = generation.get(key)
+        return str(value) if value is not None else None
+    return None
+
+
 class ComplianceApplicationService:
     """Orchestrates a bidder submission through the existing engines.
 
@@ -620,6 +638,16 @@ class ComplianceApplicationService:
             for flag_id in result.flags:
                 results_by_flag.setdefault(flag_id, []).append(result)
 
+        # Cross-bidder / similarity traces attach to the flag's grounding so
+        # the explanation may cite them. The trace itself stays on the
+        # finding payload; the reference is deterministic off the finding ID.
+        trace_refs_by_flag: dict[str, list[str]] = {}
+        for finding in verification_findings:
+            if finding.trace is not None:
+                trace_refs_by_flag.setdefault(finding.flag_id, []).append(
+                    f"trace:{finding.finding_id}"
+                )
+
         uow = self._uow_factory()
         with uow:
             document_id_by_evidence = {
@@ -644,6 +672,7 @@ class ComplianceApplicationService:
                     )
                 ),
                 finding_refs=tuple(state.finding_refs),
+                trace_refs=tuple(trace_refs_by_flag.get(state.flag_id, ())),
             )
             facts = self._facts_for_flag(
                 state, results_by_flag.get(state.flag_id, [])
@@ -778,6 +807,14 @@ class ComplianceApplicationService:
                         flag_id=f.flag_id,
                         finding_type="VERIFICATION",
                         related_bidder_ids=list(f.related_bidder_ids),
+                        evidence_refs=list(f.evidence_refs),
+                        verification_refs=list(f.verification_refs),
+                        trace=(
+                            f.trace.model_dump(mode="json")
+                            if f.trace is not None
+                            else None
+                        ),
+                        explanation_id=_explanation_id_for(explanations, f.flag_id),
                     )
                     for f in verification_findings
                 ]
@@ -786,6 +823,8 @@ class ComplianceApplicationService:
                         finding_id=identity_finding_id(bidder_id, f),
                         flag_id=f.flag_id,
                         finding_type="IDENTITY",
+                        evidence_refs=list(f.evidence_refs),
+                        explanation_id=_explanation_id_for(explanations, f.flag_id),
                     )
                     for f in engine_result.identity_findings
                 ]
@@ -796,6 +835,9 @@ class ComplianceApplicationService:
                         ),
                         flag_id=flag_id,
                         finding_type="COMPLIANCE",
+                        evidence_refs=list(r.evidence_refs),
+                        verification_refs=list(r.verification_refs),
+                        explanation_id=_explanation_id_for(explanations, flag_id),
                     )
                     for r in engine_result.compliance_results
                     for flag_id in r.flags
@@ -808,6 +850,14 @@ class ComplianceApplicationService:
                     text=e.content.summary,
                     fallback_used=e.fallback_used,
                     validation_status=e.validation_status.value,
+                    detailed_text=e.content.detailed_explanation,
+                    provider=e.generation.provider_name,
+                    model=e.generation.model,
+                    evidence_refs=list(e.grounding.evidence_refs),
+                    verification_refs=list(e.grounding.verification_refs),
+                    finding_refs=list(e.grounding.finding_refs),
+                    document_refs=list(e.grounding.document_refs),
+                    trace_refs=list(e.grounding.trace_refs),
                 )
                 for e in explanations.values()
             ],
@@ -832,6 +882,7 @@ class ComplianceApplicationService:
             verifications = uow.repos.verifications.list_by_bidder(bidder_id)
             findings = uow.repos.findings.list_by_bidder(bidder_id)
             explanations = uow.repos.explanations.list_by_bidder(bidder_id)
+<<<<<<< HEAD
         document_score = self._reconstruct_document_score(
             submission_id,
             bidder_id,
@@ -841,6 +892,11 @@ class ComplianceApplicationService:
             verifications,
             findings,
         )
+=======
+        explanation_id_by_flag = {
+            e.flag_id: e.explanation_id for e in explanations if e.flag_active
+        }
+>>>>>>> 9763b1b (integrated module 1 2 and 4)
         return ApplicationResult(
             compliance=CompliancePayload(
                 bidder_id=bidder_id,
@@ -885,6 +941,10 @@ class ComplianceApplicationService:
                     flag_id=f.flag_id,
                     finding_type=f.finding_type,
                     related_bidder_ids=list(f.related_bidder_ids),
+                    evidence_refs=list(f.evidence_refs),
+                    verification_refs=list(f.verification_refs),
+                    trace=(f.payload or {}).get("trace") or None,
+                    explanation_id=explanation_id_by_flag.get(f.flag_id),
                 )
                 for f in sorted(findings, key=lambda f: f.finding_id)
             ],
@@ -895,6 +955,14 @@ class ComplianceApplicationService:
                     text=e.concise_text,
                     fallback_used=bool(e.fallback_used),
                     validation_status=e.validation_status,
+                    detailed_text=e.detailed_text,
+                    provider=_generation_meta(e.generation, "provider_name"),
+                    model=_generation_meta(e.generation, "model"),
+                    evidence_refs=list(e.evidence_refs),
+                    verification_refs=list(e.verification_refs),
+                    finding_refs=list(e.finding_refs),
+                    document_refs=list(e.document_refs),
+                    trace_refs=list(e.trace_refs),
                 )
                 for e in sorted(explanations, key=lambda e: e.explanation_id)
             ],

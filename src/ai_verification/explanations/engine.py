@@ -249,6 +249,10 @@ class ExplanationEngine:
             verification_refs=list(grounding.verification_refs),
             finding_refs=list(grounding.finding_refs),
             uncertainties=request.uncertainties,
+            bidder_id=request.bidder_id,
+            document_refs=list(grounding.document_refs),
+            comparison_refs=list(grounding.comparison_refs),
+            trace_refs=list(grounding.trace_refs),
             locale=request.locale,
         )
 

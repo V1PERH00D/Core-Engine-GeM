@@ -91,6 +91,8 @@ def render_prompt(prompt: ExplanationPrompt) -> str:
         f"FLAG_ID: {prompt.flag_id}",
         f"FLAG_STATE: {state_word}",
     ]
+    if prompt.bidder_id:
+        parts.append(f"BIDDER_ID: {_safe_text(prompt.bidder_id)}")
     if prompt.flag_title:
         parts.append(f"FLAG_TITLE: {prompt.flag_title}")
     if prompt.flag_description:
@@ -106,6 +108,9 @@ def render_prompt(prompt: ExplanationPrompt) -> str:
         ("EVIDENCE_REFS", prompt.evidence_refs),
         ("VERIFICATION_REFS", prompt.verification_refs),
         ("FINDING_REFS", prompt.finding_refs),
+        ("DOCUMENT_REFS", prompt.document_refs),
+        ("COMPARISON_REFS", prompt.comparison_refs),
+        ("TRACE_REFS", prompt.trace_refs),
     ):
         if refs:
             parts.append(f"{label}: [{', '.join(sorted(refs))}]")
@@ -132,6 +137,10 @@ def build_context(
     verification_refs: list[str],
     finding_refs: list[str],
     uncertainties: list[str],
+    bidder_id: str | None = None,
+    document_refs: list[str] | None = None,
+    comparison_refs: list[str] | None = None,
+    trace_refs: list[str] | None = None,
     locale: str | None = None,
 ) -> ModelContext:
     """Construct the controlled, minimal model context for one flag."""
@@ -142,10 +151,14 @@ def build_context(
         flag_state=flag_state,
         flag_title=definition.title,
         flag_description=definition.description,
+        bidder_id=bidder_id,
         facts=tuple(facts),
         evidence_refs=tuple(sorted(set(evidence_refs))),
         verification_refs=tuple(sorted(set(verification_refs))),
         finding_refs=tuple(sorted(set(finding_refs))),
+        document_refs=tuple(sorted(set(document_refs or ()))),
+        comparison_refs=tuple(sorted(set(comparison_refs or ()))),
+        trace_refs=tuple(sorted(set(trace_refs or ()))),
         uncertainties=tuple(uncertainties),
         locale=locale,
         prompt_schema_version=PROMPT_SCHEMA_VERSION,

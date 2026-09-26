@@ -66,11 +66,18 @@ infrastructure into a runnable end-to-end flow with a tiny CLI:
 python -m application scenarios              # list demo scenarios
 python -m application demo                   # run all five scenarios
 python -m application demo --scenario failing --json
+python -m application demo --explain --explanations mock   # mock LLM, offline
+GEMINI_API_KEY=<key> python -m application demo --explain --explanations gemini
 ```
 
-The demo is deterministic and fully offline: static demo providers stand
-in for the government integration seams (source IDs end in `_DEMO`), the
-explanation engine uses its deterministic fallback (no LLM key), and all
-state lives in the in-memory store. See `docs/demo-guide.md` for details,
-including how to enable PostgreSQL (`GEM_DATABASE_URL`) and Redis
-(`GEM_REDIS_URL`) for the production wiring.
+The demo is deterministic and fully offline by default: static demo
+providers stand in for the government integration seams (source IDs end
+in `_DEMO`), the explanation engine uses its deterministic fallback, and
+all state lives in the in-memory store. A real LLM can generate the
+grounded explanations via the Gemini provider (`src/ai_verification/
+explanations/gemini.py`) when `GEMINI_API_KEY` (and optionally
+`GEMINI_MODEL`) are set — the LLM only explains; the boolean compliance
+flags are fixed upstream and never change. See `docs/demo-guide.md` and
+`docs/ai-explanations.md` for details, including how to enable PostgreSQL
+(`GEM_DATABASE_URL`) and Redis (`GEM_REDIS_URL`) for the production
+wiring.

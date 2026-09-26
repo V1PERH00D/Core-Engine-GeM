@@ -22,6 +22,12 @@ python -m application demo                    # all five scenarios
 python -m application demo --scenario failing # one scenario
 python -m application demo --scenario clean --json   # full JSON result
 python -m application scenarios               # list scenarios
+
+# Explanation source (LLM explains; it never changes the boolean flags):
+python -m application demo --explain                          # fallback (default)
+python -m application demo --explain --explanations mock      # offline mock LLM
+GEMINI_API_KEY=<key> python -m application demo --explain \
+    --explanations gemini                                     # live Gemini model
 ```
 
 ## 3. What the demo executes
@@ -86,12 +92,17 @@ category, per-document reasons, and a deterministic summary.
 
 ## 6. Where explanations are generated
 
-`src/ai_verification/explanations/engine.py`. The demo runs with **no
+`src/ai_verification/explanations/engine.py`. The demo defaults to **no
 model configured**, so the deterministic, facts-only fallback produces
-explanations; a real model can be injected later without changing any
-flag outcome. Explanations never decide pass/fail — they only explain a
-flag state that the deterministic engines already produced, and every
-claim is grounded in persisted evidence/verification/finding references.
+explanations; `--explanations mock` routes the same path through an
+in-process mock model (offline), and `--explanations gemini` uses the
+live provider in `src/ai_verification/explanations/gemini.py` when
+`GEMINI_API_KEY` is set (see §12b). Explanations never decide pass/fail —
+they only explain a flag state that the deterministic engines already
+produced, and every claim is grounded in persisted
+evidence/verification/finding references. `--explain` prints each
+explanation annotated with its source (`fallback` vs provider name) and
+its grounded reference IDs.
 
 ## 7. How provenance is preserved
 
@@ -129,7 +140,10 @@ used.
   documented integration seams. `MockGSTProvider` / `MockPANProvider` /
   `MockUdyamProvider` follow the same pattern and already exist.
 - Scenario data (bidders, documents, evidence) is entirely synthetic.
-- Explanations use the deterministic fallback generator.
+- Explanations use the deterministic fallback generator by default;
+  `--explanations mock` uses an in-process mock model and
+  `--explanations gemini` the live Gemini provider (see §12b). None of
+  them change the boolean flags.
 
 Nothing demo-related ever claims to be a live government response:
 provider `source` strings persisted on verification records are
@@ -191,6 +205,39 @@ worker.run_until_empty()
 Redis holds only transient coordination state (queues, leases, retries,
 idempotency). The durable compliance result always lives in the durable
 store (PostgreSQL in production, the in-memory store in demo/tests).
+
+## 12b. Enabling the live LLM explanation provider (Gemini)
+
+Set the environment variables (never hardcode the key anywhere):
+
+```bash
+export GEMINI_API_KEY=<your-key>         # required for live mode
+export GEMINI_MODEL=gemini-2.5-flash     # optional; this is the default
+# optional overrides:
+# export GEMINI_API_BASE_URL=https://generativelanguage.googleapis.com
+# export GEMINI_TIMEOUT_SECONDS=30
+```
+
+Then either run the demo with `--explanations gemini`, or wire your own
+service:
+
+```python
+from ai_verification.explanations.gemini import explanation_engine_from_env
+
+service = ComplianceApplicationService(
+    compliance_engine=engine,
+    verification_engine=verification_engine,
+    explanation_engine=explanation_engine_from_env(),  # None -> fallback
+)
+```
+
+The live provider only *explains*: the boolean compliance payload is
+computed upstream by the deterministic engines and is bit-identical
+whether explanations come from Gemini, the mock, or the fallback. Any
+provider failure, timeout, or validation failure produces the
+deterministic fallback explanation instead (recorded via
+`fallback_used` / `generation.provider_name` on the durable record), never
+a compliance change and never a leaked credential.
 
 ## 13. Security & privacy notes
 

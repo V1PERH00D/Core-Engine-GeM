@@ -1,0 +1,35 @@
+{
+  "submission_id": "sub-fixture-100",
+  "bidder_id": "bidder-fixture-100",
+  "bidder_name": "Consistent Traders",
+  "evaluation_date_iso": "2025-01-15",
+  "documents": [
+    {
+      "document_id": "GST_DOC_101",
+      "doc_type": "gst_certificate",
+      "source_filename": "GST_Certificate.pdf",
+      "extracted_fields": {
+        "gstin": "27AAACC1234F1Z5",
+        "registered_address": "Plot 42, Hinjawadi Phase 1, Pune, Maharashtra 411057"
+      }
+    },
+    {
+      "document_id": "PAN_DOC_102",
+      "doc_type": "pan_card",
+      "source_filename": "PAN_Card.pdf",
+      "extracted_fields": {
+        "pan": "AAACC1234F",
+        "taxpayer_name": "CONSISTENT TRADERS PRIVATE LIMITED"
+      }
+    },
+    {
+      "document_id": "UDYAM_DOC_103",
+      "doc_type": "udyam_certificate",
+      "source_filename": "Udyam_Certificate.pdf",
+      "extracted_fields": {
+        "udyam": "UDYAM-MH-12-0099999",
+        "registered_address": "Plot 42, Hinjawadi Phase 1, Pune, Maharashtra 411057"
+      }
+    }
+  ]
+}
