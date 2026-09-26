@@ -42,12 +42,13 @@ celery -A app.tasks worker --loglevel=info --pool=solo
 ## Integrated Modules 1/2 + 4
 
 `SIH-PROJECT-main` (Modules 1/2) is integrated with the sibling
-[`Core-Engine-GeM`](../Core-Engine-GeM) project (Module 4). Core-Engine-GeM
+[`Core-Engine-GeM`](..) project (Module 4, the parent directory of this
+repo). Core-Engine-GeM
 is installed as a local editable package — its source is NOT copied:
 
 ```bash
 pip install -r requirements.txt
-pip install -e ../Core-Engine-GeM
+pip install -e ..    # installs Core-Engine-GeM (the parent package)
 ```
 
 ### Current data flow (no Module 3)

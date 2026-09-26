@@ -39,7 +39,7 @@ wcwidth==0.8.2
 
 # --- Integration (Module 1/2 + Module 4) ---
 # Core-Engine-GeM (Module 4) installed as an editable local package:
-#   pip install -e ../Core-Engine-GeM
+#   pip install -e ..       # parent directory (Core-Engine-GeM)
 # The following are required by the integrated application/tests and were
 # previously missing from this file:
 instructor
