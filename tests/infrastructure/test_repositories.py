@@ -150,13 +150,13 @@ def test_verification_evidence_fk_optional(uow):
 def test_compliance_result_upsert_by_requirement(uow):
     uow.repos.bidders.add(_bidder())
     r = ComplianceResultRecord(
-        result_id="r1", bidder_id="b1", requirement_id="req-1",
+        result_id="r1", submission_id="s1", bidder_id="b1", requirement_id="req-1",
         capability="GST", status="PASS", reason="ok", created_at=1.0, updated_at=1.0,
     )
     uow.repos.compliance_results.save(r)
     r2 = r.model_copy(update={"status": "FAIL", "reason": "changed"})
     uow.repos.compliance_results.save(r2)
-    assert uow.repos.compliance_results.get("b1", "req-1").status == "FAIL"
+    assert uow.repos.compliance_results.get("s1", "b1", "req-1").status == "FAIL"
     uow.repos.compliance_results.save(
         r.model_copy(update={"requirement_id": "req-2", "result_id": "r2"})
     )

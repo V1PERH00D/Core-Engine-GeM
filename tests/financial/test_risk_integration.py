@@ -16,7 +16,7 @@ from compliance_engine.models import (
     Evidence,
     Requirement,
 )
-from compliance_engine.financial.findings import (
+from ai_verification.financial_bridge import (
     consistency_finding_to_verification_finding,
     trend_anomaly_to_verification_finding,
 )

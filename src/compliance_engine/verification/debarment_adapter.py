@@ -68,6 +68,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 from compliance_engine.models import Verification, VerificationStatus
+from compliance_engine.normalization import normalize_legal_name
 from compliance_engine.verification.base import VerificationProvider
 from compliance_engine.verification.debarment_models import (
     DEBARMENT_CAPABILITY,
@@ -576,9 +577,6 @@ class DebarmentResponseParser:
         # without re-normalizing.
         if kwargs.get("subject_name_original"):
             try:
-                from ai_verification.identity.normalization import (
-                    normalize_legal_name,
-                )
                 kwargs["subject_name_normalized"] = (
                     normalize_legal_name(
                         kwargs["subject_name_original"]

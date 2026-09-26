@@ -43,7 +43,9 @@ class _Store:
         self.documents: dict[str, DocumentRecord] = {}
         self.evidence: dict[str, EvidenceRecord] = {}
         self.verifications: dict[str, VerificationRecord] = {}
-        self.compliance_results: dict[tuple[str, str], ComplianceResultRecord] = {}
+        self.compliance_results: dict[
+            tuple[str, str, str], ComplianceResultRecord
+        ] = {}
         self.findings: dict[str, FindingRecord] = {}
         self.explanations: dict[str, ExplanationRecord] = {}
         self.jobs: dict[str, ProcessingJobRecord] = {}
@@ -243,16 +245,16 @@ class InMemoryComplianceResultRepository(_Repo):
         with self._s.lock:
             self._require(self._s.bidders, record.bidder_id, "bidder")
             self._s.compliance_results[
-                (record.bidder_id, record.requirement_id)
+                (record.submission_id, record.bidder_id, record.requirement_id)
             ] = record.model_copy(deep=True)
             return record.model_copy(deep=True)
 
     def get(
-        self, bidder_id: str, requirement_id: str
+        self, submission_id: str, bidder_id: str, requirement_id: str
     ) -> ComplianceResultRecord | None:
         with self._s.lock:
             rec = self._s.compliance_results.get(
-                (bidder_id, requirement_id)
+                (submission_id, bidder_id, requirement_id)
             )
             return None if rec is None else rec.model_copy(deep=True)
 
@@ -260,7 +262,7 @@ class InMemoryComplianceResultRepository(_Repo):
         with self._s.lock:
             return [
                 r.model_copy(deep=True)
-                for (b, _req), r in self._s.compliance_results.items()
+                for (_sub, b, _req), r in self._s.compliance_results.items()
                 if b == bidder_id
             ]
 

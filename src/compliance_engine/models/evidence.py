@@ -21,3 +21,4 @@ class Evidence(BaseModel):
     confidence: Confidence | None = None
     page: PageNumber | None = None
     bbox: BoundingBox | None = None
+    missing_reason: str | None = None

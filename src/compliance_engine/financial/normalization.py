@@ -48,6 +48,22 @@ _BALANCE_FIELDS = (
     "working_capital_inr_cr",
 )
 
+# Scalar field names the actual upstream extraction payload uses for
+# balance-sheet values. Values are mapped onto the internal *_inr_cr
+# representation; no unit conversion is performed (the payload convention
+# and this package both express monetary financial values in INR crore).
+_BALANCE_SCALAR_ALIASES = {
+    "total_assets": "total_assets_inr_cr",
+    "total_liabilities": "total_liabilities_inr_cr",
+    "profit_after_tax": "profit_after_tax_inr_cr",
+    "current_assets": "current_assets_inr_cr",
+    "current_liabilities": "current_liabilities_inr_cr",
+    "working_capital": "working_capital_inr_cr",
+}
+
+# Upstream field names that map onto the internal AuditInfo "audited" flag.
+_AUDIT_STATUS_ALIASES = ("audited", "audited_status")
+
 
 def _year(value: Any) -> FinancialYear | None:
     return FinancialYear.parse(value)
@@ -91,7 +107,7 @@ def normalize_financial_profile(evidence: Iterable[Evidence]) -> FinancialProfil
 
     for doc_id, evs in docs.items():
         year = _document_year(evs)
-        balance_partial: dict[FinancialYear, dict[str, float | None]] = {}
+        balance_partial: dict[FinancialYear | None, dict[str, float | None]] = {}
         audit_partial: dict[str, str | bool | None] = {}
 
         for e in evs:
@@ -120,7 +136,7 @@ def normalize_financial_profile(evidence: Iterable[Evidence]) -> FinancialProfil
                     )
                 continue
 
-            if fn == "net_worth":
+            if fn == "net_worth" and _rows(val):
                 for idx, row in enumerate(_rows(val)):
                     row_year = _row_year(row)
                     value = _number(row.get("value_inr_cr", row.get("net_worth")))
@@ -137,7 +153,7 @@ def normalize_financial_profile(evidence: Iterable[Evidence]) -> FinancialProfil
                     )
                 continue
 
-            if fn == "solvency":
+            if fn == "solvency" and _rows(val):
                 for idx, row in enumerate(_rows(val)):
                     row_year = _row_year(row)
                     flag = row.get("is_solvency_positive", row.get("solvency_indicator"))
@@ -176,54 +192,64 @@ def normalize_financial_profile(evidence: Iterable[Evidence]) -> FinancialProfil
                     audit = parsed
                 continue
 
-            if year is not None:
-                if fn in ("turnover_inr_cr", "turnover", "total_turnover_inr_cr"):
-                    value = _number(val)
-                    if value is not None:
-                        turnovers.append(
-                            TurnoverPoint(
-                                financial_year=year,
-                                turnover_inr_cr=value,
-                                evidence_id=e.evidence_id,
-                                document_id=doc_id,
-                                confidence=e.confidence,
-                            )
-                        )
-                elif fn in ("net_worth_inr_cr", "net_worth"):
-                    value = _number(val)
-                    if value is not None:
-                        net_worth.append(
-                            NetWorth(
-                                financial_year=year,
-                                value_inr_cr=value,
-                                evidence_id=e.evidence_id,
-                                document_id=doc_id,
-                                confidence=e.confidence,
-                            )
-                        )
-                elif fn in ("is_solvency_positive", "solvency_indicator"):
-                    solvency.append(
-                        Solvency(
+            # Scalar financial fields. ``year`` is the document-level
+            # financial year and may be None; a missing year is preserved
+            # as None and never fabricated.
+            if fn in ("turnover_inr_cr", "turnover", "total_turnover_inr_cr"):
+                if year is None:
+                    continue
+                value = _number(val)
+                if value is not None:
+                    turnovers.append(
+                        TurnoverPoint(
                             financial_year=year,
-                            is_solvency_positive=bool(val),
+                            turnover_inr_cr=value,
                             evidence_id=e.evidence_id,
                             document_id=doc_id,
                             confidence=e.confidence,
                         )
                     )
-                elif fn in _BALANCE_FIELDS:
-                    value = _number(val)
-                    balance_partial.setdefault(year, {})[fn] = value
+            elif fn in ("net_worth_inr_cr", "net_worth"):
+                value = _number(val)
+                if value is not None:
+                    net_worth.append(
+                        NetWorth(
+                            financial_year=year,
+                            value_inr_cr=value,
+                            evidence_id=e.evidence_id,
+                            document_id=doc_id,
+                            confidence=e.confidence,
+                        )
+                    )
+            elif fn in ("is_solvency_positive", "solvency_indicator"):
+                if isinstance(val, bool):
+                    solvency.append(
+                        Solvency(
+                            financial_year=year,
+                            is_solvency_positive=val,
+                            evidence_id=e.evidence_id,
+                            document_id=doc_id,
+                            confidence=e.confidence,
+                        )
+                    )
+            elif fn in _BALANCE_FIELDS or fn in _BALANCE_SCALAR_ALIASES:
+                value = _number(val)
+                key = _BALANCE_SCALAR_ALIASES.get(fn, fn)
+                balance_partial.setdefault(year, {})[key] = value
 
-            if fn in _AUDIT_FIELDS:
+            if fn in _AUDIT_STATUS_ALIASES:
+                if isinstance(val, bool):
+                    audit_partial["audited"] = val
+            elif fn in _AUDIT_FIELDS:
                 audit_partial[fn] = val
 
         for bs_year, parts in balance_partial.items():
+            year_label = bs_year.canonical if bs_year is not None else "unknown"
             balance_sheets.append(
                 _balance_sheet(
                     bs_year,
                     parts,
-                    f"{doc_id}:balance_sheet:{bs_year.canonical}",
+                    f"{doc_id}:balance_sheet:{year_label}",
                     doc_id,
                     None,
                 )
@@ -257,7 +283,7 @@ def _document_year(evs: list[Evidence]) -> FinancialYear | None:
 
 
 def _balance_sheet(
-    year: FinancialYear,
+    year: FinancialYear | None,
     row: dict[str, Any],
     evidence_id: str,
     document_id: str,

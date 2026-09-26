@@ -1,9 +1,9 @@
 """Top-level compliance engine orchestration.
 
 ``ComplianceEngine`` is the single entry point that turns canonical
-evidence and tender requirements into compliance results and identity
-findings. It contains no capability-specific rule logic, performs no
-government verification, and does not interpret tender text.
+evidence and tender requirements into compliance results. It contains
+no capability-specific rule logic, performs no government verification,
+and does not interpret tender text.
 
 Rules and providers are constructor dependencies (infrastructure). Per
 requests carry only the bidder's evidence and the requirements to
@@ -18,12 +18,16 @@ evaluate. The engine:
       requirement, so a single provider outage cannot abort the whole
       bid. Provider detection is by lookup in the registered providers
       mapping; no rule exceptions are caught.
-    * Invokes :func:`verify_cross_document_identity` once per run.
 
-Unexpected exceptions from rules and from the identity verifier
-propagate to the caller. Scoring, risk, and AI recommendation are
-out-of-scope future components of the same system; they consume
-``EngineResult`` and are not produced here.
+Boundary note: the engine does NOT execute cross-document identity
+verification, cross-bidder analysis, or any other reconciliation logic.
+Those are downstream concerns; ``EngineResult.identity_findings``
+remains on the result model only for downstream/serialization
+compatibility and is always empty here.
+
+Unexpected exceptions from rules propagate to the caller. Scoring,
+risk, and AI recommendation are out-of-scope future components of the
+same system; they consume ``EngineResult`` and are not produced here.
 """
 
 from __future__ import annotations
@@ -31,7 +35,6 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
 
-from compliance_engine.anomalies.identity import verify_cross_document_identity
 from compliance_engine.models import (
     Applicability,
     ComplianceResult,
@@ -113,15 +116,21 @@ class ComplianceEngine:
         self,
         evidence: Sequence[Evidence],
         requirements: Sequence[Requirement],
+        *,
+        submission_id: str | None = None,
     ) -> EngineResult:
         """Evaluate a single bid.
 
         Returns an :class:`EngineResult` containing one
-        ``ComplianceResult`` per requirement and the identity findings
-        produced from the same evidence. ``bidder_id`` on the result is
+        ``ComplianceResult`` per requirement. The engine performs no
+        identity reconciliation, so ``identity_findings`` is always
+        empty. ``bidder_id`` on the result is
         derived from the first evidence record (or ``None`` if no
-        evidence was supplied). The engine never mutates ``evidence`` or
-        ``requirements``.
+        evidence was supplied). ``submission_id``, when supplied by the
+        caller, is carried through unchanged onto the result so the
+        caller (e.g. a persistence writer) can correlate the result
+        back to the originating submission. The engine never mutates
+        ``evidence`` or ``requirements``.
         """
         evidence_list = list(evidence)
         requirements_list = list(requirements)
@@ -133,14 +142,13 @@ class ComplianceEngine:
             requirements=requirements_list,
             _verification_records=_verification_records,
         )
-        identity_findings = verify_cross_document_identity(evidence_list)
 
         bidder_id = evidence_list[0].bidder_id if evidence_list else None
 
         return EngineResult(
             bidder_id=bidder_id,
+            submission_id=submission_id,
             compliance_results=compliance_results,
-            identity_findings=identity_findings,
             verification_records=_verification_records,
         )
 

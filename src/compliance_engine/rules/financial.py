@@ -14,23 +14,13 @@ from typing import Any
 from pydantic import ValidationError
 
 from compliance_engine.financial import (
-    FinancialCheck,
     FinancialRequirementParams,
-    check_financial_consistency,
-    consistency_finding_to_verification_finding,
     determine_focus,
     evaluate,
     normalize_financial_profile,
     outcome_to_compliance_result,
 )
 from compliance_engine.financial.outcome import FinancialOutcome
-from compliance_engine.financial.trend import (
-    TrendAnomaly,
-    detect_turnover_trend_anomaly,
-)
-from compliance_engine.financial.findings import (
-    trend_anomaly_to_verification_finding,
-)
 from compliance_engine.flags import get_flag_definition
 from compliance_engine.models import (
     Capability,
@@ -112,36 +102,6 @@ class FinancialCapacityRule:
             )
 
         return result
-
-    def run_extra_checks(
-        self,
-        bidder_id: str,
-        evidence: list[Evidence],
-    ) -> list:
-        """Return cross-document consistency and trend findings.
-
-        These are not ComplianceResults; they are VerificationFindings
-        ready for the AI verification engine. The orchestrator can call
-        this after the primary rule has run.
-        """
-
-        profile = normalize_financial_profile(evidence)
-        findings = []
-
-        for cf in check_financial_consistency(profile):
-            findings.append(
-                consistency_finding_to_verification_finding(bidder_id, cf)
-            )
-
-        anomaly: TrendAnomaly | None = detect_turnover_trend_anomaly(
-            profile.annual_turnovers
-        )
-        if anomaly is not None:
-            findings.append(
-                trend_anomaly_to_verification_finding(bidder_id, anomaly)
-            )
-
-        return findings
 
 
 def _unknown_config_result(requirement: Requirement, detail: str) -> ComplianceResult:

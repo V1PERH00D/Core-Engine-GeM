@@ -53,6 +53,22 @@ def _refs(points):
     return tuple(sorted({p.evidence_id for p in points if p.evidence_id}))
 
 
+def _year_key(entry) -> str | None:
+    """Canonical year of an entry, or None when the year is unspecified."""
+
+    fy = entry.financial_year
+    return fy.canonical if fy is not None else None
+
+
+def _year_label(entry) -> str:
+    key = _year_key(entry)
+    return key if key is not None else "an unspecified financial year"
+
+
+def _years_tuple(key: str | None) -> tuple[str, ...]:
+    return (key,) if key is not None else ()
+
+
 def _not_checked(check, reason):
     return FinancialOutcome(check=check, status=ComplianceStatus.NOT_CHECKED, reason=reason)
 
@@ -272,8 +288,15 @@ def _evaluate_net_worth(params, profile):
 
     entries = list(profile.net_worth)
     if required_years:
-        chosen = [e for e in entries if e.financial_year.canonical in required_years]
+        chosen = [e for e in entries if _year_key(e) in required_years]
         if not chosen:
+            if any(e.financial_year is None for e in entries):
+                return _missing(
+                    check,
+                    "Net worth evidence is available but does not specify a "
+                    "financial year; the requirement needs "
+                    f"{list(required_years)}.",
+                )
             if entries:
                 years = sorted({e.financial_year.canonical for e in entries})
                 return FinancialOutcome(
@@ -294,7 +317,7 @@ def _evaluate_net_worth(params, profile):
         chosen = entries
         if not chosen:
             return _missing(check, "No net worth evidence is available.")
-        if len({e.financial_year.canonical for e in chosen}) > 1:
+        if len({_year_key(e) for e in chosen}) > 1:
             return _not_checked(
                 check,
                 "Multiple net-worth years are present but required_financial_years "
@@ -302,6 +325,7 @@ def _evaluate_net_worth(params, profile):
             )
 
     entry = chosen[0]
+    year = _year_key(entry)
     passed = entry.value_inr_cr >= threshold
     status = ComplianceStatus.PASS if passed else ComplianceStatus.FAIL
     relation = "meets" if passed else "falls below"
@@ -310,17 +334,17 @@ def _evaluate_net_worth(params, profile):
         status=status,
         reason=(
             f"The tender requires net worth >= ₹{threshold:g} crore for "
-            f"{entry.financial_year.canonical}. The available net worth evidence "
+            f"{_year_label(entry)}. The available net worth evidence "
             f"records ₹{entry.value_inr_cr:g} crore, which {relation} the requirement."
         ),
         expected={
             "threshold_inr_cr": threshold,
             "operator": ">=",
-            "financial_years": required_years or (entry.financial_year.canonical,),
+            "financial_years": required_years or _years_tuple(year),
         },
-        actual={"value_inr_cr": entry.value_inr_cr, "financial_year": entry.financial_year.canonical},
+        actual={"value_inr_cr": entry.value_inr_cr, "financial_year": year},
         flags=(F.NET_WORTH_BELOW_THRESHOLD,) if not passed else (),
-        financial_years=(entry.financial_year.canonical,),
+        financial_years=_years_tuple(year),
         evidence_refs=_refs([entry]),
     )
 
@@ -342,8 +366,15 @@ def _evaluate_solvency(params, profile):
 
     entries = list(profile.solvency)
     if required_years:
-        chosen = [e for e in entries if e.financial_year.canonical in required_years]
+        chosen = [e for e in entries if _year_key(e) in required_years]
         if not chosen:
+            if any(e.financial_year is None for e in entries):
+                return _missing(
+                    check,
+                    "Solvency evidence is available but does not specify a "
+                    "financial year; the requirement needs "
+                    f"{list(required_years)}.",
+                )
             if entries:
                 years = sorted({e.financial_year.canonical for e in entries})
                 return FinancialOutcome(
@@ -362,7 +393,7 @@ def _evaluate_solvency(params, profile):
         chosen = entries
         if not chosen:
             return _missing(check, "No solvency evidence is available.")
-        if len({e.financial_year.canonical for e in chosen}) > 1:
+        if len({_year_key(e) for e in chosen}) > 1:
             return _not_checked(
                 check,
                 "Multiple solvency years are present but required_financial_years "
@@ -370,17 +401,18 @@ def _evaluate_solvency(params, profile):
             )
 
     entry = chosen[0]
+    year = _year_key(entry)
     if entry.is_solvency_positive:
         return FinancialOutcome(
             check=check,
             status=ComplianceStatus.PASS,
             reason=(
                 "The tender requires positive solvency; the submitted evidence for "
-                f"{entry.financial_year.canonical} indicates positive solvency."
+                f"{_year_label(entry)} indicates positive solvency."
             ),
             expected={"require_positive_solvency": True},
             actual={"is_solvency_positive": True},
-            financial_years=(entry.financial_year.canonical,),
+            financial_years=_years_tuple(year),
             evidence_refs=_refs([entry]),
         )
     return FinancialOutcome(
@@ -388,13 +420,13 @@ def _evaluate_solvency(params, profile):
         status=ComplianceStatus.FAIL,
         reason=(
             "The tender requires positive solvency, but the submitted evidence for "
-            f"{entry.financial_year.canonical} indicates the bidder is not positively "
+            f"{_year_label(entry)} indicates the bidder is not positively "
             "solvent."
         ),
         expected={"require_positive_solvency": True},
         actual={"is_solvency_positive": False},
         flags=(F.SOLVENCY_REQUIREMENT_FAILED,),
-        financial_years=(entry.financial_year.canonical,),
+        financial_years=_years_tuple(year),
         evidence_refs=_refs([entry]),
     )
 
@@ -476,14 +508,21 @@ def _evaluate_balance_sheet(params, profile):
 
     entries = list(profile.balance_sheets)
     if required_years:
-        chosen = [e for e in entries if e.financial_year.canonical in required_years]
+        chosen = [e for e in entries if _year_key(e) in required_years]
         if not chosen:
+            if any(e.financial_year is None for e in entries):
+                return _missing(
+                    check,
+                    "Balance-sheet evidence is available but does not specify a "
+                    "financial year; the requirement needs "
+                    f"{list(required_years)}.",
+                )
             return _missing(check, "No balance-sheet evidence for the required year(s).")
     else:
         chosen = entries
         if not chosen:
             return _missing(check, "No balance-sheet evidence is available.")
-        if len({e.financial_year.canonical for e in chosen}) > 1:
+        if len({_year_key(e) for e in chosen}) > 1:
             return _not_checked(
                 check,
                 "Multiple balance-sheet years are present but required_financial_years "
@@ -492,7 +531,8 @@ def _evaluate_balance_sheet(params, profile):
 
     sheet = chosen[0]
     refs = _refs([sheet])
-    year = sheet.financial_year.canonical
+    year = _year_key(sheet)
+    label = _year_label(sheet)
 
     missing_fields = [f for f in required_fields if getattr(sheet, f, None) is None]
     if missing_fields:
@@ -500,13 +540,13 @@ def _evaluate_balance_sheet(params, profile):
             check=check,
             status=ComplianceStatus.FAIL,
             reason=(
-                f"Balance-sheet evidence for {year} is missing required field(s): "
+                f"Balance-sheet evidence for {label} is missing required field(s): "
                 f"{', '.join(missing_fields)}."
             ),
             expected={"required_fields": tuple(required_fields)},
             actual={"missing_fields": tuple(missing_fields)},
             flags=(F.BALANCE_SHEET_INCOMPLETE,),
-            financial_years=(year,),
+            financial_years=_years_tuple(year),
             evidence_refs=refs,
         )
 
@@ -524,17 +564,17 @@ def _evaluate_balance_sheet(params, profile):
                 expected={"working_capital_inr_cr": derived},
                 actual={"working_capital_inr_cr": sheet.working_capital_inr_cr},
                 flags=(F.FINANCIAL_DATA_INCONSISTENCY,),
-                financial_years=(year,),
+                financial_years=_years_tuple(year),
                 evidence_refs=refs,
             )
 
     return FinancialOutcome(
         check=check,
         status=ComplianceStatus.PASS,
-        reason=f"Balance-sheet evidence for {year} is complete.",
+        reason=f"Balance-sheet evidence for {label} is complete.",
         expected={"required_fields": tuple(required_fields)},
         actual={"financial_year": year},
-        financial_years=(year,),
+        financial_years=_years_tuple(year),
         evidence_refs=refs,
     )
 

@@ -122,11 +122,16 @@ class TurnoverPoint(BaseModel):
 
 
 class NetWorth(BaseModel):
-    """Net worth for a single financial year (can be negative)."""
+    """Net worth for a single financial year (can be negative).
+
+    ``financial_year`` is ``None`` when the upstream evidence does not
+    associate a financial year with the value; the engine must not fabricate
+    one and rules must treat the year as unknown.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
-    financial_year: FinancialYear
+    financial_year: FinancialYear | None = None
     value_inr_cr: float
     evidence_id: str | None = None
     document_id: str | None = None
@@ -134,11 +139,15 @@ class NetWorth(BaseModel):
 
 
 class Solvency(BaseModel):
-    """Solvency indicator for a single financial year."""
+    """Solvency indicator for a single financial year.
+
+    ``financial_year`` is ``None`` when the upstream evidence does not
+    associate a financial year with the indicator.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
-    financial_year: FinancialYear
+    financial_year: FinancialYear | None = None
     is_solvency_positive: bool
     evidence_id: str | None = None
     document_id: str | None = None
@@ -150,11 +159,13 @@ class BalanceSheet(BaseModel):
 
     Every numeric field is optional and, when absent, must remain
     ``None`` (unavailable) rather than being fabricated.
+    ``financial_year`` is ``None`` when the upstream evidence does not
+    associate a financial year with the balance-sheet values.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid", allow_inf_nan=False)
 
-    financial_year: FinancialYear
+    financial_year: FinancialYear | None = None
     total_assets_inr_cr: NonNegative | None = None
     total_liabilities_inr_cr: NonNegative | None = None
     profit_after_tax_inr_cr: float | None = None
@@ -209,13 +220,13 @@ class FinancialProfile(BaseModel):
 
     def net_worth_for_year(self, year: FinancialYear) -> NetWorth | None:
         for nw in self.net_worth:
-            if nw.financial_year.canonical == year.canonical:
+            if nw.financial_year is not None and nw.financial_year.canonical == year.canonical:
                 return nw
         return None
 
     def solvency_for_year(self, year: FinancialYear) -> Solvency | None:
         for s in self.solvency:
-            if s.financial_year.canonical == year.canonical:
+            if s.financial_year is not None and s.financial_year.canonical == year.canonical:
                 return s
         return None
 
@@ -223,7 +234,7 @@ class FinancialProfile(BaseModel):
         self, year: FinancialYear
     ) -> BalanceSheet | None:
         for bs in self.balance_sheets:
-            if bs.financial_year.canonical == year.canonical:
+            if bs.financial_year is not None and bs.financial_year.canonical == year.canonical:
                 return bs
         return None
 

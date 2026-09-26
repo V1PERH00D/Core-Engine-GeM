@@ -36,7 +36,7 @@ def _seed(uow):
                            document_id="d1")
     )
     uow.repos.compliance_results.save(
-        ComplianceResultRecord(result_id="r1", bidder_id="b1", requirement_id="req1",
+        ComplianceResultRecord(result_id="r1", submission_id="s1", bidder_id="b1", requirement_id="req1",
                                capability="GST", status="FAIL", reason="missing",
                                evidence_refs=["e1"], verification_refs=["v1"],
                                created_at=now, updated_at=now)

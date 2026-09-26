@@ -2,6 +2,7 @@
 
 import pytest
 
+from ai_verification.financial_bridge import collect_financial_verification_findings
 from compliance_engine.engine import ComplianceEngine
 from compliance_engine.models import (
     Applicability,
@@ -113,20 +114,18 @@ def test_engine_bidder_id_derived_from_evidence():
     assert result.bidder_id == "acme"
 
 
-def test_run_extra_checks_returns_consistency_and_trend_findings():
-    rule = RuleCls()
+def test_collected_verification_findings_include_consistency_and_trend():
     evidence = [
         _ev("BS1", "financial_year", "2023-24"),
         _ev("BS1", "total_assets_inr_cr", 100.0, doc_type="BALANCE_SHEET"),
         _ev("BS2", "financial_year", "2023-24"),
         _ev("BS2", "total_assets_inr_cr", 80.0, doc_type="BALANCE_SHEET"),
     ]
-    findings = rule.run_extra_checks("acme", evidence)
+    findings = collect_financial_verification_findings("acme", evidence)
     assert any(f.flag_id == "FINANCIAL_DATA_INCONSISTENCY" for f in findings)
 
 
-def test_run_extra_checks_trend_anomaly_when_present():
-    rule = RuleCls()
+def test_collected_verification_findings_trend_anomaly_when_present():
     evidence = [
         _ev("BS1", "financial_year", "2021-22"),
         _ev("BS1", "turnover_inr_cr", 1.0),
@@ -135,12 +134,11 @@ def test_run_extra_checks_trend_anomaly_when_present():
         _ev("BS3", "financial_year", "2023-24"),
         _ev("BS3", "turnover_inr_cr", 200.0),
     ]
-    findings = rule.run_extra_checks("acme", evidence)
+    findings = collect_financial_verification_findings("acme", evidence)
     assert any(f.flag_id == "TURNOVER_TREND_ANOMALY" for f in findings)
 
 
-def test_run_extra_checks_no_findings_for_clean_history():
-    rule = RuleCls()
+def test_collected_verification_findings_none_for_clean_history():
     evidence = [
         _ev("BS1", "financial_year", "2021-22"),
         _ev("BS1", "turnover_inr_cr", 10.0),
@@ -149,19 +147,18 @@ def test_run_extra_checks_no_findings_for_clean_history():
         _ev("BS3", "financial_year", "2023-24"),
         _ev("BS3", "turnover_inr_cr", 12.0),
     ]
-    findings = rule.run_extra_checks("acme", evidence)
+    findings = collect_financial_verification_findings("acme", evidence)
     assert findings == []
 
 
 def test_consistency_findings_flow_to_verification_finding():
-    rule = RuleCls()
     evidence = [
         _ev("BS1", "financial_year", "2023-24"),
         _ev("BS1", "total_assets_inr_cr", 100.0, doc_type="BALANCE_SHEET"),
         _ev("BS2", "financial_year", "2023-24"),
         _ev("BS2", "total_assets_inr_cr", 200.0, doc_type="BALANCE_SHEET"),
     ]
-    findings = rule.run_extra_checks("acme", evidence)
+    findings = collect_financial_verification_findings("acme", evidence)
     vf = findings[0]
     assert vf.bidder_id == "acme"
     assert "FINANCIAL_DATA_INCONSISTENCY" in vf.flag_id

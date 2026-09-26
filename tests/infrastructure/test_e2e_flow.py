@@ -67,7 +67,8 @@ def test_end_to_end_flow(uow_factory, clock):
         )
         uow.repos.compliance_results.save(
             ComplianceResultRecord(
-                result_id="r-1", bidder_id="bidder-1", requirement_id="req-1",
+                result_id="r-1", submission_id="sub-1", bidder_id="bidder-1",
+                requirement_id="req-1",
                 capability="GST", status="FAIL", reason="GSTIN not found",
                 evidence_refs=["ev-1"], verification_refs=["v-1"],
                 created_at=clock(), updated_at=clock(),

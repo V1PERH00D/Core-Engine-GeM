@@ -80,6 +80,7 @@ class EvidenceRecord(BaseModel):
     confidence: float | None = None
     page: int | None = None
     bbox: list[float] | None = None
+    missing_reason: str | None = None
     created_at: float
 
 
@@ -109,14 +110,17 @@ class VerificationRecord(BaseModel):
 
 
 class ComplianceResultRecord(BaseModel):
-    """One per-requirement compliance outcome.
+    """One per-requirement compliance outcome within one submission.
 
-    Unique on ``(bidder_id, requirement_id)`` for idempotent upsert; the
-    surrogate ``result_id`` is stable across re-runs of the same
-    requirement by the same bidder.
+    Unique on ``(submission_id, bidder_id, requirement_id)`` for
+    idempotent upsert; a bidder may have multiple submissions that
+    evaluate the same requirement, and each evaluation is a distinct
+    durable record. The surrogate ``result_id`` is stable across
+    re-runs of the same requirement within the same submission.
     """
 
     result_id: str
+    submission_id: str
     bidder_id: str
     requirement_id: str
     capability: str

@@ -244,9 +244,41 @@ ALTER TABLE explanations ADD COLUMN IF NOT EXISTS review_actions JSONB NOT NULL 
 """
 
 
+_MIGRATION_0003 = """
+-- Compliance results are now scoped per submission: a bidder may have
+-- multiple submissions that evaluate the same requirement. The durable
+-- identity is (submission_id, bidder_id, requirement_id). Existing rows
+-- predating this migration have no submission; they are backfilled with
+-- the empty string so the new primary key can be created safely.
+ALTER TABLE compliance_results
+    ADD COLUMN IF NOT EXISTS submission_id TEXT;
+UPDATE compliance_results
+    SET submission_id = ''
+    WHERE submission_id IS NULL;
+ALTER TABLE compliance_results
+    ALTER COLUMN submission_id SET NOT NULL;
+ALTER TABLE compliance_results
+    DROP CONSTRAINT compliance_results_pkey;
+ALTER TABLE compliance_results
+    ADD PRIMARY KEY (submission_id, bidder_id, requirement_id);
+CREATE INDEX IF NOT EXISTS idx_compliance_submission
+    ON compliance_results (submission_id);
+
+-- Field-level missing_reason from upstream extraction (optional; absent
+-- stays NULL, values such as 'NOT_APPLICABLE' are stored verbatim; no
+-- enum is enforced).
+ALTER TABLE evidence
+    ADD COLUMN IF NOT EXISTS missing_reason TEXT;
+"""
+
 MIGRATIONS: tuple[Migration, ...] = (
     Migration(version=1, name="initial_schema", sql=_MIGRATION_0001),
     Migration(version=2, name="explanation_metadata", sql=_MIGRATION_0002),
+    Migration(
+        version=3,
+        name="submission_scoped_compliance_and_missing_reason",
+        sql=_MIGRATION_0003,
+    ),
 )
 
 

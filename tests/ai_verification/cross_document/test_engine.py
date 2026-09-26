@@ -142,7 +142,7 @@ def test_engine_runs_against_real_fixture_evidence() -> None:
     from compliance_engine.ingestion.upstream import normalize_upstream
 
     fixture = (
-        Path("/home/viper/Documents/Core-Engine-GeM")
+        Path(__file__).resolve().parents[3]
         / "fixtures"
         / "upstream"
         / "sample.json"

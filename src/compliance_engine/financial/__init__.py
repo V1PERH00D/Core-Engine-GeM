@@ -18,11 +18,7 @@ from compliance_engine.financial.consistency import (
     check_financial_consistency,
 )
 from compliance_engine.financial.evaluation import determine_focus, evaluate
-from compliance_engine.financial.findings import (
-    consistency_finding_to_verification_finding,
-    outcome_to_compliance_result,
-    trend_anomaly_to_verification_finding,
-)
+from compliance_engine.financial.findings import outcome_to_compliance_result
 from compliance_engine.financial.models import (
     AuditInfo,
     BalanceSheet,
@@ -75,7 +71,6 @@ __all__ = [
     "TurnoverPoint",
     "aggregate_turnover",
     "check_financial_consistency",
-    "consistency_finding_to_verification_finding",
     "derived_working_capital",
     "detect_turnover_trend_anomaly",
     "determine_focus",
@@ -86,6 +81,5 @@ __all__ = [
     "normalize_financial_year",
     "outcome_to_compliance_result",
     "select_turnover_by_years",
-    "trend_anomaly_to_verification_finding",
     "working_capital",
 ]

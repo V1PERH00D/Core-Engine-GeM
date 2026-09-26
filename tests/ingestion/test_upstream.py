@@ -5,7 +5,11 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from compliance_engine.ingestion import evidence_id_for, normalize_upstream
+from compliance_engine.ingestion import (
+    evidence_id_for,
+    normalize_submission,
+    normalize_upstream,
+)
 from compliance_engine.models import Evidence
 
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "upstream"
@@ -89,3 +93,59 @@ def test_malformed_evidence_fails_clearly() -> None:
     payload["documents"][0]["extracted_fields"]["gstin"]["bbox"] = [50.0, 100.0]
     with pytest.raises(ValidationError, match="gstin"):
         normalize_upstream(payload)
+
+
+# --- Input-contract / envelope preservation ---------------------------------
+
+
+def test_missing_reason_survives_when_supplied() -> None:
+    records = normalize_upstream(_load("sample.json"))
+    missing = _by_field(records, "return_period")[0]
+    assert missing.missing_reason == "NOT_APPLICABLE"
+    gstin = _by_field(records, "gstin")[0]
+    assert gstin.missing_reason is None
+
+
+def test_missing_reason_absent_in_sample_1_defaults_to_none() -> None:
+    records = normalize_upstream(_load("sample_1.json"))
+    assert records
+    assert all(item.missing_reason is None for item in records)
+
+
+def test_normalize_submission_preserves_submission_identity() -> None:
+    submission = normalize_submission(_load("sample.json"))
+    assert submission.submission_id == "sub_compliant_001"
+    assert submission.bidder_id == "bidder_acme_01"
+    assert all(e.bidder_id == "bidder_acme_01" for e in submission.evidence)
+
+
+def test_document_metadata_survives() -> None:
+    submission = normalize_submission(_load("sample.json"))
+    payload = _load("sample.json")
+    assert [d.document_id for d in submission.documents] == [
+        d["document_id"] for d in payload["documents"]
+    ]
+    gst_doc = submission.documents[0]
+    assert gst_doc.document_id == "doc-uuid-gst-001"
+    assert gst_doc.doc_type == "GST"
+    assert gst_doc.doc_type_confidence == payload["documents"][0]["doc_type_confidence"]
+    assert gst_doc.ocr_confidence == payload["documents"][0]["ocr_confidence"]
+    assert gst_doc.file_hash == payload["documents"][0]["file_hash"]
+
+
+def test_grounding_survives() -> None:
+    payload = _load("sample.json")
+    submission = normalize_submission(payload)
+    for document, raw in zip(submission.documents, payload["documents"]):
+        assert document.grounding is not None
+        assert document.grounding.field_confidence == raw["grounding"]["field_confidence"]
+        assert (
+            document.grounding.overall_grounding_score
+            == raw["grounding"]["overall_grounding_score"]
+        )
+        assert document.grounding.is_reliable == raw["grounding"]["is_reliable"]
+
+
+def test_normalize_upstream_matches_normalize_submission_evidence() -> None:
+    payload = _load("sample.json")
+    assert normalize_upstream(payload) == normalize_submission(payload).evidence

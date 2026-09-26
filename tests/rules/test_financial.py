@@ -215,7 +215,12 @@ def test_financial_capacity_fails_when_metrics_are_inconsistent(rule):
     assert per_doc.status is ComplianceStatus.PASS
 
     # Cross-document consistency: the two sheets differ -> inconsistency.
-    profile = rule.run_extra_checks("BIDDER_001", evidence)
+    # (Downstream-only signal; bridge lives in ai_verification.)
+    from ai_verification.financial_bridge import (
+        collect_financial_verification_findings,
+    )
+
+    profile = collect_financial_verification_findings("BIDDER_001", evidence)
     assert any(f.flag_id == "FINANCIAL_DATA_INCONSISTENCY" for f in profile)
 
 

@@ -330,7 +330,8 @@ class PostgresEvidenceRepository:
                 cur.execute(
                     "INSERT INTO evidence (evidence_id, bidder_id, document_id, "
                     "field_name, document_type, value, confidence, page, bbox, "
-                    "created_at) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                    "missing_reason, created_at) "
+                    "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                     (
                         record.evidence_id,
                         record.bidder_id,
@@ -341,6 +342,7 @@ class PostgresEvidenceRepository:
                         record.confidence,
                         record.page,
                         _j(record.bbox),
+                        record.missing_reason,
                         record.created_at,
                     ),
                 )
@@ -350,7 +352,7 @@ class PostgresEvidenceRepository:
 
     _SELECT = (
         "SELECT evidence_id, bidder_id, document_id, field_name, document_type, "
-        "value, confidence, page, bbox, created_at FROM evidence"
+        "value, confidence, page, bbox, missing_reason, created_at FROM evidence"
     )
 
     def _one(self, sql, params):
@@ -460,19 +462,22 @@ class PostgresComplianceResultRepository:
         self._conn = conn
 
     _SELECT = (
-        "SELECT result_id, bidder_id, requirement_id, capability, status, "
+        "SELECT result_id, submission_id, bidder_id, requirement_id, "
+        "capability, status, "
         "reason, expected, actual, rule_id, evidence_refs, verification_refs, "
         "flags, created_at, updated_at FROM compliance_results"
     )
 
     def save(self, record: ComplianceResultRecord) -> ComplianceResultRecord:
         cols = (
-            "result_id, bidder_id, requirement_id, capability, status, reason, "
+            "result_id, submission_id, bidder_id, requirement_id, capability, "
+            "status, reason, "
             "expected, actual, rule_id, evidence_refs, verification_refs, "
             "flags, created_at, updated_at"
         )
         params = (
             record.result_id,
+            record.submission_id,
             record.bidder_id,
             record.requirement_id,
             record.capability,
@@ -491,8 +496,9 @@ class PostgresComplianceResultRepository:
             try:
                 cur.execute(
                     f"INSERT INTO compliance_results ({cols}) "
-                    "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
-                    "ON CONFLICT (bidder_id, requirement_id) DO UPDATE SET "
+                    "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
+                    "ON CONFLICT (submission_id, bidder_id, requirement_id) "
+                    "DO UPDATE SET "
                     "result_id = EXCLUDED.result_id, "
                     "capability = EXCLUDED.capability, "
                     "status = EXCLUDED.status, reason = EXCLUDED.reason, "
@@ -520,10 +526,11 @@ class PostgresComplianceResultRepository:
             cur.execute(sql, params)
             return [ComplianceResultRecord(**row) for row in cur.fetchall()]
 
-    def get(self, bidder_id, requirement_id):
+    def get(self, submission_id, bidder_id, requirement_id):
         return self._one(
-            self._SELECT + " WHERE bidder_id = %s AND requirement_id = %s",
-            (bidder_id, requirement_id),
+            self._SELECT
+            + " WHERE submission_id = %s AND bidder_id = %s AND requirement_id = %s",
+            (submission_id, bidder_id, requirement_id),
         )
 
     def list_by_bidder(self, bidder_id):

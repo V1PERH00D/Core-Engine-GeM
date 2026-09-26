@@ -124,6 +124,7 @@ def check_financial_consistency(
     net_worth: list[tuple[str, str | None, float, str]] = [
         (n.financial_year.canonical, n.document_id, n.value_inr_cr, n.evidence_id or "")
         for n in profile.net_worth
+        if n.financial_year is not None
     ]
     for year, records in _grouped(net_worth).items():
         findings.extend(_compare_year_metric("net_worth_inr_cr", year, records))
@@ -139,6 +140,8 @@ def check_financial_consistency(
     for metric, attr in components:
         records: list[tuple[str, str | None, float, str]] = []
         for bs in profile.balance_sheets:
+            if bs.financial_year is None:
+                continue
             value = getattr(bs, attr, None)
             if value is None:
                 continue

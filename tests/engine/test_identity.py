@@ -1,4 +1,10 @@
-"""Identity findings: returned separately and coexist with compliance results."""
+"""Boundary: the engine performs no cross-document identity reconciliation.
+
+``EngineResult.identity_findings`` is retained for downstream /
+serialization compatibility, but ComplianceEngine.run() never executes
+cross-document identity verification, so the list is always empty —
+even when identity-bearing fields disagree across documents.
+"""
 
 from __future__ import annotations
 
@@ -13,7 +19,7 @@ from ._builders import (
 )
 
 
-def test_identity_finding_returned_separately_from_compliance_results() -> None:
+def test_conflicting_identity_fields_produce_no_findings() -> None:
     gst_identity = make_evidence(
         document_id="doc-gst-001",
         document_type="GST",
@@ -34,11 +40,10 @@ def test_identity_finding_returned_separately_from_compliance_results() -> None:
     )
 
     assert result.compliance_results == []
-    assert len(result.identity_findings) == 1
-    assert result.identity_findings[0].flag_id == "CROSS_DOCUMENT_IDENTITY_MISMATCH"
+    assert result.identity_findings == []
 
 
-def test_identity_finding_present_alongside_compliance_results() -> None:
+def test_identity_reconciliation_not_run_alongside_compliance_results() -> None:
     gst_identity = make_evidence(
         document_id="doc-gst-001",
         document_type="GST",
@@ -61,4 +66,4 @@ def test_identity_finding_present_alongside_compliance_results() -> None:
 
     assert len(result.compliance_results) == 1
     assert result.compliance_results[0].status == "PASS"
-    assert len(result.identity_findings) == 1
+    assert result.identity_findings == []
