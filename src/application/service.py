@@ -882,7 +882,6 @@ class ComplianceApplicationService:
             verifications = uow.repos.verifications.list_by_bidder(bidder_id)
             findings = uow.repos.findings.list_by_bidder(bidder_id)
             explanations = uow.repos.explanations.list_by_bidder(bidder_id)
-<<<<<<< HEAD
         document_score = self._reconstruct_document_score(
             submission_id,
             bidder_id,
@@ -892,11 +891,9 @@ class ComplianceApplicationService:
             verifications,
             findings,
         )
-=======
         explanation_id_by_flag = {
             e.flag_id: e.explanation_id for e in explanations if e.flag_active
         }
->>>>>>> 9763b1b (integrated module 1 2 and 4)
         return ApplicationResult(
             compliance=CompliancePayload(
                 bidder_id=bidder_id,

@@ -2,15 +2,20 @@
 
 The adapter is the ONLY place that translates between the two systems:
 
-  * Per-document text is re-scanned with Module 2's EXISTING extractors
-    (:func:`extract_statutory_tokens` and the Make-in-India regex
-    fallback). Bidder-level concatenated text is NEVER used here —
-    document provenance would be destroyed (Phase 5 of the spec).
+  * The PRIMARY path maps the per-document fields Module 2 already
+    extracted (``Document.extracted_fields``, produced once during
+    Module 2's entity-extraction job). The adapter never re-extracts.
+  * A legacy fallback (documents processed before per-document fields
+    existed, or plain-text fixtures) delegates to Module 2's OWN
+    :func:`app.entity_extraction.document_fields
+    .extract_document_level_fields` — Module 2 stays the single owner
+    of extraction; bidder-level concatenated text is NEVER used, so
+    document provenance is preserved.
   * Field names pass through :func:`map_field_name` (explicit mapping).
   * The resulting payload is validated by the integration contract models
     and handed to Core's own ``normalize_upstream`` — the canonical,
     deterministic Evidence builder. Evidence IDs follow Core's scheme
-    ``<document_id>:<field_name>`` (Phase 7 of the spec).
+    ``<document_id>:<field_name>``.
   * confidence / page / bbox are only populated when the upstream
     extraction actually provides them. Module 2's regex extraction does
     not, so they stay ``None`` — never fabricated.
@@ -23,24 +28,16 @@ from typing import Any, Iterable
 from compliance_engine.ingestion.upstream import normalize_upstream
 from compliance_engine.models import Evidence
 
-from app.entity_extraction.llm_extractor import extract_mii_regex_fallback
-from app.entity_extraction.regex_patterns import extract_statutory_tokens
+from ai_verification.document_scoring import DocumentInput
+
+# Module 2 owns extraction; the adapter only delegates to it for the
+# legacy no-stored-fields path. No extractor logic lives here.
+from app.entity_extraction.document_fields import (
+    extract_document_level_fields as _module2_extract_document_fields,
+)
 
 from .contracts import ExtractedField, UpstreamDocument, UpstreamExtractionPayload
 from .field_mapping import map_document_type, map_field_name
-
-# Module 2 statutory regex token keys that are surfaced as named
-# per-document Evidence fields (values only when actually extracted).
-_STATUTORY_TOKEN_KEYS: tuple[str, ...] = (
-    "pan",       # -> pan_number
-    "gstin",     # -> gstin
-    "cin",       # -> cin
-    "udyam",     # -> udyam_registration_number
-    "udin",      # -> ca_udin
-    "epfo",      # -> epfo (not compared by Core; kept for provenance)
-    "esic",      # -> esic (not compared by Core; kept for provenance)
-    "dpiit",     # -> dpiit (not compared by Core; kept for provenance)
-)
 
 
 def _doc_attr(doc: Any, name: str) -> Any:
@@ -53,44 +50,39 @@ def _doc_text(doc: Any) -> str:
     return _doc_attr(doc, "extracted_text") or _doc_attr(doc, "raw_text") or ""
 
 
+def _document_id_of(doc: Any) -> str:
+    return str(_doc_attr(doc, "id") or _doc_attr(doc, "document_id"))
+
+
+def _classified_type_of(doc: Any) -> str | None:
+    return (
+        _doc_attr(doc, "classified_type")
+        or _doc_attr(doc, "classification_type")
+        or _doc_attr(doc, "doc_type")
+    )
+
+
 def extract_document_fields(classified_type: str | None, text: str) -> dict[str, Any]:
-    """Run Module 2's existing extractors over ONE document's text.
+    """Delegate ONE document's extraction to Module 2, then apply the
+    explicit field-name mapping.
 
     Returns a mapping of Core-canonical field name -> extracted value.
     Only fields actually found in this document are returned; nothing is
     invented for absent fields.
     """
-    if not text:
-        return {}
-
-    tokens = extract_statutory_tokens(text)
-    fields: dict[str, Any] = {}
-    for token_key in _STATUTORY_TOKEN_KEYS:
-        value = tokens.get(token_key)
-        if value:
-            fields[map_field_name(token_key)] = value
-
-    if map_document_type(classified_type) == "MAKE_IN_INDIA":
-        mii = extract_mii_regex_fallback(text)
-        if mii.declared_local_content_pct is not None:
-            fields[map_field_name("declared_local_content_pct")] = (
-                mii.declared_local_content_pct
-            )
-        if mii.supplier_class:
-            fields["supplier_class"] = mii.supplier_class
-
-    return fields
+    module2_fields = _module2_extract_document_fields(classified_type, text)
+    return {
+        map_field_name(name): value
+        for name, value in module2_fields.items()
+        if value is not None
+    }
 
 
 def document_to_payload_document(doc: Any) -> UpstreamDocument:
     """Build one contract-validated upstream document from a Module 1/2
     document record (ORM ``Document`` row or dict with the same fields)."""
-    document_id = str(_doc_attr(doc, "id") or _doc_attr(doc, "document_id"))
-    classified_type = (
-        _doc_attr(doc, "classified_type")
-        or _doc_attr(doc, "classification_type")
-        or _doc_attr(doc, "doc_type")
-    )
+    document_id = _document_id_of(doc)
+    classified_type = _classified_type_of(doc)
     raw_fields: dict[str, Any] | None = _doc_attr(doc, "extracted_fields")
 
     if raw_fields is not None:
@@ -143,8 +135,28 @@ def build_bidder_evidence(
     return normalize_upstream(payload)
 
 
+def build_document_inputs(documents: Iterable[Any]) -> list[DocumentInput]:
+    """Build Core ``DocumentInput`` metadata for the SAME documents.
+
+    The ``document_type`` is the exact Core-canonical type the Evidence
+    adapter produces (``map_document_type``), so the existing
+    ``DocumentScoringEngine`` scores the same document identities that
+    Module 4 verified. Documents that produced no extractable fields are
+    still included — the scoring engine applies its own ``NO_EVIDENCE``
+    policy to them.
+    """
+    return [
+        DocumentInput(
+            document_id=_document_id_of(doc),
+            document_type=map_document_type(_classified_type_of(doc)),
+        )
+        for doc in documents
+    ]
+
+
 __all__ = [
     "build_bidder_evidence",
+    "build_document_inputs",
     "build_upstream_payload",
     "document_to_payload_document",
     "extract_document_fields",

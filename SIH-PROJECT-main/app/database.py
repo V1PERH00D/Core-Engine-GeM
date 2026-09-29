@@ -51,6 +51,10 @@ class Document(Base):
     stored_path = Column(String)
     extension = Column(String)
     extracted_text = Column(String)
+    # Module 2 document-level extracted fields (Module 2 field names).
+    # Produced ONCE by Module 2 during entity extraction so downstream
+    # modules map — never re-extract — the values. {"gstin": "...", ...}
+    extracted_fields = Column(JSON, nullable=True)
     classification_status = Column(String, default="pending")
     classified_type = Column(String)
     display_name = Column(String)
@@ -81,6 +85,62 @@ class DocumentEvidence(Base):
     bbox = Column(JSON, nullable=True)            # stays NULL when unknown
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
+class BidderComplianceResultRecord(Base):
+    """Module 3 (ComplianceEngine) output persisted for one bidder.
+
+    One row per requirement evaluated by the REAL compliance engine.
+    ``status`` is the engine's ComplianceStatus (PASS / FAIL / MISSING /
+    UNVERIFIABLE / NOT_CHECKED / NOT_APPLICABLE) — never fabricated; a
+    provider outage stays UNVERIFIABLE with its honest reason.
+    """
+
+    __tablename__ = "bidder_compliance_results"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    evaluation_id = Column(UUID(as_uuid=True))
+    bidder_folder_id = Column(UUID(as_uuid=True))
+    bidder_id = Column(String)
+    requirement_id = Column(String)
+    capability = Column(String)
+    status = Column(String)
+    reason = Column(String, nullable=True)
+    rule_id = Column(String, nullable=True)
+    expected = Column(JSON, nullable=True)
+    actual = Column(JSON, nullable=True)
+    evidence_refs = Column(JSON, default=list)
+    verification_refs = Column(JSON, default=list)
+    flags = Column(JSON, default=list)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class BidderVerificationRecord(Base):
+    """Authoritative Module 3 provider Verification records (audit trail).
+
+    One row per provider.verify() call made by the real compliance
+    engine. All fields are faithful copies of the frozen ``Verification``
+    model — statuses (VERIFIED / NOT_FOUND / INVALID / INACTIVE /
+    UNAVAILABLE / ERROR) and payloads are never altered or invented.
+    """
+
+    __tablename__ = "bidder_verification_records"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    evaluation_id = Column(UUID(as_uuid=True))
+    bidder_folder_id = Column(UUID(as_uuid=True))
+    bidder_id = Column(String)
+    verification_id = Column(String)
+    capability = Column(String)
+    source = Column(String)
+    queried_identifier = Column(String, nullable=True)
+    status = Column(String)
+    data = Column(JSON, nullable=True)
+    evidence_id = Column(String, nullable=True)
+    document_id = Column(String, nullable=True)
+    transport_status_code = Column(Integer, nullable=True)
+    retrieved_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
 class BidderVerificationResult(Base):
     """Module 4 output for one bidder: findings, canonical flags and the
     grounded explanations of those findings.
@@ -99,4 +159,34 @@ class BidderVerificationResult(Base):
     flags = Column(JSON, default=list)
     explanations = Column(JSON, default=list)
     error = Column(String, nullable=True)
+    generated_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class BidderDocumentScoreRecord(Base):
+    """DocumentScoringEngine output persisted for one bidder.
+
+    The score is produced AFTER Module 4 findings/flags exist, by the
+    EXISTING Core ``ai_verification.document_scoring.DocumentScoringEngine``
+    over the same document-level Evidence Module 4 consumed. This row is a
+    faithful persistence of the engine's ``BidderDocumentScore`` — no
+    scoring semantics are re-implemented or altered here.
+
+    ``document_scores`` keeps per-document provenance: document_id,
+    document_type, evidence_count, finding flag ids, reason codes and the
+    per-document score, so the overall bidder score is auditable against
+    the persisted document evidence and findings.
+    """
+
+    __tablename__ = "bidder_document_scores"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    evaluation_id = Column(UUID(as_uuid=True))
+    bidder_folder_id = Column(UUID(as_uuid=True))
+    bidder_id = Column(String)
+    submission_id = Column(String, nullable=True)
+    status = Column(String)
+    overall_score = Column(Float)
+    category = Column(String)              # RED / YELLOW / GREEN
+    reason_codes = Column(JSON, default=list)
+    document_scores = Column(JSON, default=list)
+    summary = Column(String)
     generated_at = Column(DateTime, default=datetime.datetime.utcnow)

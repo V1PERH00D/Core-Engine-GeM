@@ -1,22 +1,19 @@
-"""Future Module 3 (compliance/verification) extension point — INTERFACE ONLY.
+"""Module 3 (compliance/verification) extension point — SATISFIED.
 
-The current integrated flow is:
+The REAL Module 3 implementation is the Core-Engine-GeM compliance
+engine (:class:`compliance_engine.engine.ComplianceEngine` with its real
+rules and real provider adapters), wired by
+:mod:`app.integration.module3_service`. The integrated flow is:
 
-    Module 1/2  ->  Evidence  ->  Module 4 (CrossDocumentConsistencyEngine)
+    Module 1/2  ->  Evidence  ->  Module 3  ->  ComplianceResult[]
+                                              + Verification[]
+                                     ->  Module 4 identity
+                                         reconciliation / enrichment
 
-and the application does NOT depend on Module 3 today. When Module 3 is
-built, it slots in as:
-
-    Module 1/2  ->  Evidence  ->  Module 3  ->  Verification[]
-                                            ->  Module 4 identity
-                                                reconciliation / enrichment
-
-Nothing in the current codebase implements, mocks, or fakes this stage;
-no Verification records are ever manufactured here. The protocol below is
-the single place where a future Module 3 implementation must plug in. It
-returns authoritative ``Verification`` records (from
-``compliance_engine.models.verification``) which the already-wired
-``IdentityReconciliationEngine`` then consumes.
+The protocol below documents the stage contract and is kept for
+interface documentation; ``run_module3_for_bidder`` is the concrete
+implementation. No Verification records are ever manufactured outside
+the real adapters.
 """
 
 from __future__ import annotations

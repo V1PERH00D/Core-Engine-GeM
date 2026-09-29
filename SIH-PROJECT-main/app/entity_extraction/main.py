@@ -10,6 +10,9 @@ from app.database import (
     Document,
     DocumentEvidence,
     BidderVerificationResult,
+    BidderDocumentScoreRecord,
+    BidderComplianceResultRecord,
+    BidderVerificationRecord,
 )
 from app.entity_extraction.tasks import process_entity_extraction_job
 from app.integration.module4_service import run_module4_for_evaluation
@@ -59,10 +62,11 @@ def extract_entities_endpoint(payload: Optional[Dict[str, Any]] = None, db: Sess
         raise HTTPException(status_code=500, detail=f"Extraction error: {str(e)}")
 
 # 3. Module 4 verification results (findings / canonical flags / grounded
-#    explanations with document-level evidence provenance).
+#    explanations with document-level evidence provenance, plus the
+#    DocumentScoringEngine per-document scores and bidder category).
 @app.get(
     "/api/v1/evaluations/{evaluation_id}/verification",
-    summary="Get Module 4 verification results for an evaluation",
+    summary="Get Module 4 verification + document scoring results for an evaluation",
 )
 def get_verification_results(evaluation_id: str, db: Session = Depends(get_db)):
     try:
@@ -105,6 +109,23 @@ def get_verification_results(evaluation_id: str, db: Session = Depends(get_db)):
             .filter(DocumentEvidence.bidder_folder_id == result.bidder_folder_id)
             .all()
         )
+        score_row = (
+            db.query(BidderDocumentScoreRecord)
+            .filter(BidderDocumentScoreRecord.bidder_folder_id == result.bidder_folder_id)
+            .first()
+        )
+        compliance_rows = (
+            db.query(BidderComplianceResultRecord)
+            .filter(BidderComplianceResultRecord.bidder_folder_id == result.bidder_folder_id)
+            .order_by(BidderComplianceResultRecord.created_at)
+            .all()
+        )
+        verification_rows = (
+            db.query(BidderVerificationRecord)
+            .filter(BidderVerificationRecord.bidder_folder_id == result.bidder_folder_id)
+            .order_by(BidderVerificationRecord.created_at)
+            .all()
+        )
         bidders.append({
             "bidder_id": str(result.bidder_folder_id),
             "bidder_name": folder.raw_folder_name if folder else None,
@@ -132,9 +153,62 @@ def get_verification_results(evaluation_id: str, db: Session = Depends(get_db)):
                 }
                 for e in evidence_rows
             ],
+            # REAL Module 3 output: one row per evaluated requirement,
+            # faithfully persisted (UNVERIFIABLE stays UNVERIFIABLE).
+            "compliance_results": [
+                {
+                    "requirement_id": r.requirement_id,
+                    "capability": r.capability,
+                    "status": r.status,
+                    "reason": r.reason,
+                    "rule_id": r.rule_id,
+                    "expected": r.expected,
+                    "actual": r.actual,
+                    "evidence_refs": r.evidence_refs,
+                    "verification_refs": r.verification_refs,
+                    "flags": r.flags,
+                }
+                for r in compliance_rows
+            ],
+            # REAL Module 3 authoritative provider records (audit trail).
+            "verification_records": [
+                {
+                    "verification_id": v.verification_id,
+                    "capability": v.capability,
+                    "source": v.source,
+                    "queried_identifier": v.queried_identifier,
+                    "status": v.status,
+                    "data": v.data,
+                    "evidence_id": v.evidence_id,
+                    "document_id": v.document_id,
+                    "transport_status_code": v.transport_status_code,
+                    "retrieved_at": (
+                        v.retrieved_at.isoformat() if v.retrieved_at else None
+                    ),
+                }
+                for v in verification_rows
+            ],
             "findings": result.findings,
             "flags": result.flags,
             "explanations": result.explanations,
+            # DocumentScoringEngine output (None when the bidder had no
+            # documents or Module 4 failed — never a fabricated score).
+            "scoring": (
+                {
+                    "bidder_id": score_row.bidder_id,
+                    "submission_id": score_row.submission_id,
+                    "overall_score": score_row.overall_score,
+                    "category": score_row.category,
+                    "reason_codes": score_row.reason_codes,
+                    "documents": score_row.document_scores,
+                    "summary": score_row.summary,
+                    "generated_at": (
+                        score_row.generated_at.isoformat()
+                        if score_row.generated_at else None
+                    ),
+                }
+                if score_row else None
+            ),
         })
 
     return {

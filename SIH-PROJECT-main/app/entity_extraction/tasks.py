@@ -13,6 +13,7 @@ from app.entity_extraction.schemas.mii import MakeInIndiaExtraction
 from app.entity_extraction.schemas.epfo_esic import EPFOESICExtraction
 
 from app.entity_extraction.regex_patterns import extract_statutory_tokens
+from app.entity_extraction.document_fields import extract_document_level_fields
 from app.entity_extraction.llm_extractor import (
     extract_balance_sheet_structured,
     extract_mii_declaration,
@@ -34,10 +35,23 @@ def _extract_single_bidder(bidder_id: str, bidder_name: str, documents: list, ra
         classification = getattr(doc, "classified_type", None) or (doc.get("classification_type") if isinstance(doc, dict) else None)
         
         if text:
+            # Module 2 document-level extracted fields: reuse the fields
+            # already persisted on the document when present (DB mode
+            # extracts once before this call); otherwise scan the text
+            # ONCE here. Downstream modules map these fields instead of
+            # re-running the extractors.
+            existing_fields = (
+                doc.get("extracted_fields")
+                if isinstance(doc, dict)
+                else getattr(doc, "extracted_fields", None)
+            )
+            if existing_fields is None:
+                existing_fields = extract_document_level_fields(classification, text)
             pages.append({
                 "raw_text": text,
                 "file_name": file_name,
-                "classification_type": classification
+                "classification_type": classification,
+                "extracted_fields": existing_fields,
             })
     
     full_text = " \n ".join([p["raw_text"] for p in pages]) if pages else ""
@@ -157,6 +171,17 @@ def process_entity_extraction_job(target: Union[str, Dict[str, Any]]) -> Dict[st
                     Document.bidder_folder_id == bidder.id,
                     Document.extracted_text.isnot(None)
                 ).all()
+
+                # Module 2: persist each document's extracted fields ONCE
+                # on the Document row (skip rows that already have them so
+                # re-runs never re-extract). Every downstream module maps
+                # these fields; none re-runs the extractors.
+                for d in docs:
+                    if getattr(d, "extracted_fields", None) is None:
+                        d.extracted_fields = extract_document_level_fields(
+                            d.classified_type, d.extracted_text or ""
+                        )
+                db.commit()
 
                 bidder_forensics = {
                     "producer": next((d.pdf_producer for d in docs if d.pdf_producer), None),
